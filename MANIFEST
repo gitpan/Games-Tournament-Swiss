@@ -1,0 +1,27 @@
+Build.PL
+Changes
+MANIFEST
+META.yml # Will be created by "make dist"
+README
+lib/Games/Tournament.pm
+lib/Games/Tournament/Swiss.pm
+lib/Games/Tournament/Card.pm
+lib/Games/Tournament/Contestant.pm
+lib/Games/Tournament/Contestant/Swiss.pm
+lib/Games/Tournament/Contestant/Swiss/Preference.pm
+lib/Games/Tournament/Swiss/Bracket.pm
+lib/Games/Tournament/Swiss/Config.pm
+lib/Games/Tournament/Swiss/Procedure.pm
+lib/Games/Tournament/Swiss/Procedure/FIDE.pm
+lib/Games/Tournament/Swiss/Procedure/Dummy.pm
+script_files/pair
+script_files/pairingtable
+script_files/crosstable
+t/00-load.t
+t/boilerplate.t
+t/pod-coverage.t
+t/pod.t
+t/median.t
+t/pair.t
+t/tally.t
+Makefile.PL
