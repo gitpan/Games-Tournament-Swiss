@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Feb 22, 09:54:05 PM
+# Last Edit: 2007 Apr 04, 07:31:43 AM
 # $Id: $
 
 use warnings;
@@ -58,7 +58,7 @@ sub new() {
 
 	$member->preference
 
-A right (duty) to take a role, eg White or Black, in the next round, calculated as a function of the difference between the number of games previously played in the different roles, and accommodated according to its value, Mild, Strong, or Absolute. An Absolute preference of +2 for White is given when the contestant has played 2 (or a larger number) more of the previous rounds as Black than as White, or when the last 2 rounds were played as Black. A Strong preference of +1 for White represents having played one more round as Black than as White. A Mild preference of +0 occurs when the number of games played with both colors is the same, but the last game was played as Black. A Mild preference of -0 is the same, but with the last game being as White, the preference is for Black. Preferences of -1 and -2 represent the same situations as for +1 and +2, but with the roles reversed. Before the first round, the preference of the highest ranked player (+-0) is determined by lot. A7
+A right (duty) to take a role, eg White or Black, in the next round, calculated as a function of the difference between the number of games previously played in the different roles, and accommodated according to its value, Mild, Strong, or Absolute. An Absolute preference of +2 for White is given when the contestant has played 2 (or a larger number) more of the previous rounds as Black than as White, or when the last 2 rounds were played as Black. A Strong preference of +1 for White represents having played one more round as Black than as White. A Mild preference of +0 occurs when the number of games played with both colors is the same, but the last game was played as Black. A Mild preference of -0 is the same, but with the last game being as White, the preference is for Black. Preferences of -1 and -2 represent the same situations as for +1 and +2, but with the roles reversed. Before the first round, the preference of the highest ranked player (+-0) is determined by lot. Returned is a Games::Tournament::Contestant::Swiss::Preference object. A7
 
 =cut
 

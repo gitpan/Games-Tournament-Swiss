@@ -1,4 +1,11 @@
 ---
+version: 0.04
+date: April 2007
+changes:
+  - Pair script wants letter scores, not numbers.
+  - Test FIDE.pm pairs correctly in 4-entrant tournament.
+
+---
 version: 0.03
 date: February 2007
 changes:

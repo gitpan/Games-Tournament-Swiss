@@ -1,6 +1,6 @@
 ---
 name: Games-Tournament-Swiss
-version: 0.03
+version: 0.04
 author:
   - 'Dr Bean <drbean, followed by the at mark (@), cpan, then a dot, and finally, org>'
 abstract: FIDE Swiss Same-Rank Contestant Pairing
@@ -18,7 +18,7 @@ provides:
     version: 0.01
   Games::Tournament::Contestant:
     file: lib/Games/Tournament/Contestant.pm
-    version: 0.01
+    version: 0.02
   Games::Tournament::Contestant::Swiss:
     file: lib/Games/Tournament/Contestant/Swiss.pm
     version: 0.01
@@ -27,7 +27,7 @@ provides:
     version: 0.01
   Games::Tournament::Swiss:
     file: lib/Games/Tournament/Swiss.pm
-    version: 0.03
+    version: 0.04
   Games::Tournament::Swiss::Bracket:
     file: lib/Games/Tournament/Swiss/Bracket.pm
     version: 0.01
@@ -42,5 +42,5 @@ provides:
     version: 0.01
   Games::Tournament::Swiss::Procedure::FIDE:
     file: lib/Games/Tournament/Swiss/Procedure/FIDE.pm
-    version: 0.01
+    version: 0.02
 generated_by: Module::Build version 0.2611

@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Procedure::FIDE;
 
-# Last Edit: 2007 Feb 22, 10:28:30 PM
+# Last Edit: 2007 Apr 04, 02:58:10 PM
 # $Id: $
 
 use warnings;
@@ -49,7 +49,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -172,7 +172,7 @@ sub next {
     my $index = delete $args{index};
     $index = -1 unless defined $index;
     my $groups = $args{brackets};
-    return LAST if $index >= $#$groups;
+    return (LAST, index => $index, %args) if $index >= $#$groups;
     my $next    = $index + 1;
     my $members = $groups->[$next]->members;
     print "Next, Bracket "
@@ -589,7 +589,9 @@ sub c6pairs {
         elsif ( $group->{criterion}->{$refloat} eq 'Up' ) {
             for my $pos ( 0 .. $p - 1 ) {
                 my @pair   = map { $_->[$pos] } ( $s1, $s2 );
-                my @floats = map { $_->{floats}->[ -$round{$refloat} ] } @pair;
+                my @floats = map { $_->{floats}->[-$round{$refloat}] || 'None'}
+			    @pair;
+		die "checking for undefined float" if grep { not defined $_ } @floats;
                 if ( $pair[0]->score > $pair[1]->score and $floats[1] eq 'Up' )
                 {
                     print "$refloat: NOK. "
@@ -1321,7 +1323,7 @@ sub round {
 
 	$group->matches
 
-Gets/sets the matches which we have made.
+Gets/sets the matches which we have made. Returned is an anonymous array of the matches in the round, the first element of which is an anonymous array of the matches in the first bracket, and so on for the other brackets.
 
 =cut
 

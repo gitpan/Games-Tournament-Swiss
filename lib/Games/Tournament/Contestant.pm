@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant;
 
-# Last Edit: 2007 Feb 22, 02:20:35 PM
+# Last Edit: 2007 Apr 04, 03:01:32 PM
 # $Id: $
 
 use warnings;
@@ -22,7 +22,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -278,7 +278,7 @@ sub title {
 
 	$member->scores
 
-Sets/gets the scores of the contestant in the different matches of the tournament, an ongoing record of their standing in the competition. These scores may or may not include the current score. To calculate the total score, use 'score', because internally the scores may not be stored as number scores.
+Sets/gets the scores (actually results, eg 'Draw', 'Win') of the contestant in the different matches of the tournament, an ongoing record of their standing in the competition. These scores may or may not include the current score. To calculate the total score, use 'score', because internally the scores are not stored as number scores.
 
 =cut
 

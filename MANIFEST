@@ -23,5 +23,6 @@ t/pod-coverage.t
 t/pod.t
 t/median.t
 t/pair.t
+t/pairing4.t
 t/tally.t
 Makefile.PL
