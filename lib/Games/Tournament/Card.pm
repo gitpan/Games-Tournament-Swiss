@@ -1,6 +1,6 @@
 package Games::Tournament::Card;
 
-# Last Edit: 2007 Feb 22, 02:18:25 PM
+# Last Edit: 2007 Apr 10, 12:26:17 PM
 # $Id: $
 
 use warnings;
@@ -29,10 +29,6 @@ our $VERSION = '0.01';
 =head1 DESCRIPTION
 
 In a tournament, matches take place in rounds between contestants, who are maybe floated, and who have roles, and there is a result for these matches, which can be written on a card. 
-
-=head1 REQUIREMENTS
-
-Installing this module requires Module::Build.
 
 =head1 METHODS
 
@@ -82,11 +78,11 @@ sub canonize {
       or grep m/bye/i, values %roles;
   ROLE: foreach my $contestant ( values %$contestants ) {
         my $role = $roles{ $contestant->{id} };
-        if ( exists $result->{$role} ) {
-            if ( $role eq 'Bye' ) {
+        if ( $role eq 'Bye' ) {
                 $result{$role} = $result->{$role} = 'Bye';
             }
-            elsif ( $result->{$role} =~ m/^(?:Win|Loss|Draw|Absent)$/i ) {
+        elsif ( exists $result->{$role} ) {
+            if ( $result->{$role} =~ m/^(?:Win|Loss|Draw|Absent)$/i ) {
                 $result{$role} = $result->{$role};
             }
             else {
@@ -95,21 +91,27 @@ sub canonize {
             }
             next ROLE;
         }
-        my @opponents = grep { $contestant->id ne $_->id } values %$contestants;
-        my $opponent  = $opponents[0];
-        my $other     = $roles{ $opponent->id };
-        if ( exists $result->{$other} ) {
-            $result{$role} = 'Loss'
-              if $result->{$other} =~ m/^Win$/i;
-            $result{$role} = 'Win'
-              if $result->{$other} =~ m/^Loss$/i;
-            $result{$role} = 'Draw'
-              if $result->{$other} =~ m/^Draw$/i;
-        }
-        else {
-            die
+        elsif ( values %$contestants != 1 ) {
+            my @opponents =
+              grep { $contestant->id ne $_->id } values %$contestants;
+            my $opponent = $opponents[0];
+            my $other    = $roles{ $opponent->id };
+            if ( exists $result->{$other} ) {
+                $result{$role} = 'Loss'
+                  if $result->{$other} =~ m/^Win$/i;
+                $result{$role} = 'Win'
+                  if $result->{$other} =~ m/^Loss$/i;
+                $result{$role} = 'Draw'
+                  if $result->{$other} =~ m/^Draw$/i;
+            }
+            else {
+                die
 "$result->{$role}, $result->{$other} result for player $contestant->{id} and opponent $opponent->{id} in round $round";
+            }
         }
+	else {
+		die "Not a Bye, but no result or no partner";
+	}
     }
     $self->result( \%result );
 }
@@ -163,7 +165,6 @@ Returns the role for $player from $game, eg 'White', 'Banker' or 'Away'.
 sub myRole {
     my $self       = shift;
     my $contestant = shift;
-    $self->canonize;
     my $contestants = $self->contestants;
     my %roles       = map { $contestants->{$_}->id => $_ } keys %$contestants;
     my $role        = $roles{ $contestant->id };
@@ -309,3 +310,5 @@ under the same terms as Perl itself.
 =cut
 
 1;    # End of Games::Tournament::Card
+
+# vim: set ts=8 sts=4 sw=4 noet:

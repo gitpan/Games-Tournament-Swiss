@@ -5,9 +5,16 @@ WriteMakefile
           'NAME' => 'Games::Tournament::Swiss',
           'VERSION_FROM' => 'lib/Games/Tournament/Swiss.pm',
           'PREREQ_PM' => {
-                           'Test::More' => '0'
+                           'Test::More' => '0',
+                           'YAML' => '0'
                          },
           'INSTALLDIRS' => 'site',
+          'EXE_FILES' => [
+                           'script_files/crosstable',
+                           'script_files/pair',
+                           'script_files/pairingtable',
+                           'script_files/pairstately'
+                         ],
           'PL_FILES' => {}
         )
 ;

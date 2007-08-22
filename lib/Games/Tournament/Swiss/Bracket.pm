@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Feb 22, 10:06:32 PM
+# Last Edit: 2007 Apr 25, 11:26:29 PM
 # $Id: $
 
 use warnings;
@@ -40,10 +40,6 @@ our $VERSION = '0.01';
 In a Swiss tournament, in each round contestants are paired with other players with the same, or similar, scores. These contestants are grouped into a score group (bracket) in the process of deciding who plays who.
 
 The concept of immigration control is applied to impose order on the players floating in and out of these score brackets. That is, floating is like flying.
-
-=head1 REQUIREMENTS
-
-I will put something in here later, probably.
 
 =head1 METHODS
 
@@ -482,7 +478,7 @@ sub hetero {
 
 =head2 c7shuffler
 
-	$nextS2 = $bracket->c7shuffler
+	$nextS2 = $bracket->c7shuffler($firstmismatch)
 	if ( @nextS2 compatible )
 	{
 	    create match cards;
@@ -490,14 +486,14 @@ sub hetero {
 
 Gets the next permutation of the second-half players in D1 transposition counting order, as used in C7, that will not have the same incompatible player in the bad position found in the present transposition.
 
-=cut 
+=cut
 
 sub c7shuffler {
     my $self     = shift;
+    my $position = shift;
     my $s2       = $self->s2;
     my @players  = $self->rank(@$s2);
     my $p        = $self->p;
-    my $position = shift;
     my @pattern;
     my @playerCopy = @players;
     for my $i ( 0 .. $#$s2 ) {

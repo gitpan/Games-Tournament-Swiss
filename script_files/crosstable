@@ -1,5 +1,20 @@
 #!/usr/bin/perl
 
+# Last Edit: 2007 Aug 21, 11:47:39 AM
+# $Id: /swiss/trunk/script_files/pair 1285 2007-08-20T09:52:35.271041Z greg  $
+
+=head1 NAME
+
+crosstable - The results of players against their opponents
+
+=head1 VERSION
+
+0.04
+
+=cut
+
+our $VERSION = '0.04';
+
 use strict;
 use warnings;
 
@@ -52,7 +67,7 @@ for my $round ( @rounds )
     if ( $tourney->unmarkedCards(@$games) ) {
         my $results = LoadFile("./scores/$round.yaml");
         for my $game (@$games) {
-            my %result;
+            my (%score, %result);
             my $total;
             my @contestants = map { $_->id } values %{ $game->{contestants} };
             for my $role ( @$roles, 'Bye' ) {
@@ -60,19 +75,25 @@ for my $round ( @rounds )
                 next
                   unless $player
                   and $player->isa('Games::Tournament::Contestant');
-                my $result = $results->{ $player->id };
-                $total += $result;
-                $result{$role} =
-                    $role eq 'Bye' ? $player
-                  : $result == $scores->{win}    ? 'Win'
-                  : $result == $scores->{draw}   ? "Draw"
-                  : $result == $scores->{loss}   ? "Loss"
-                  : $result == $scores->{absent} ? 'Absent'
+                my $result = $results->{ $player->name };
+                warn "$player->{name} got $result in round $round?"
+                       unless defined $result;
+                $result{$role} = $result;
+                $score{$role} =
+                    $role =~ m/Bye/i ? $scores->{bye}
+                  : $result =~ m/Win/i ? $scores->{win}
+                  : $result =~ m/Draw/i ? $scores->{draw}
+                  : $result =~ m/Loss/i ? $scores->{loss}
+                  : $result =~ m/Absent/i ? $scores->{absent}
                   : "Error";
+		die "Error: $player->{name} $player->{id}'s result in round $round is $result?" if $score{$role} eq 'Error';
+		$total += $score{$role};
             }
-            die
-"total scores in round $round game with players @contestants not $total"
-              if $total != $scores->{win} + $scores->{loss};
+	    warn "total scores in round $round with players @contestants = $total?"
+	    unless $total == $scores->{win} + $scores->{loss} or 
+	    $total == 2 * $scores->{draw} or
+	    $total == $scores->{draw} + $scores->{absent} or
+	    $total == 2 * $scores->{absent};
             $game->result( \%result );
         }
     }
@@ -129,13 +150,9 @@ $place, $player->id, $player->name, $player->rating, $player->score, @$results
 
 __END__
 
-=head1 NAME
-
-crosstable - Mark cards with results of the matches
-
 =head1 SYNOPSIS
 
-markCards
+crosstable
 
 --help            This help message
 
@@ -143,9 +160,7 @@ markCards
 
 =head1 DESCRIPTION
 
-B<markCards> tallies results from $scores/$round.yaml, marking the Games::Tournament::Card cards from matches.yaml with them. It then serializes the cards back into matches.yaml. The unmarked cards are preserved in matches.yaml.bak.
-
-The configuration file, ../league.yaml, holds the value of $scores, and $round is the directory name in which the command is run and where matches.yaml and player.yaml, a file of serialized player objects, exist. (The name must be a round number.)
+B<crosstable> tallies the results of a tournament, recording the role, the opponent and the result for each player over each of the rounds.
 
 =cut
 

@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Procedure::Dummy;
 
-# Last Edit: 2007 Feb 22, 10:18:49 PM
+# Last Edit: 2007 Apr 10, 12:30:30 PM
 # $Id: $
 
 use warnings;
@@ -34,10 +34,6 @@ our $VERSION = '0.01';
 =head1 DESCRIPTION
 
 A test module swappable in to allow testing the non-Games::Tournament::Procedure parts of Games::Tournament::Swiss
-
-=head1 REQUIREMENTS
-
-Installing this module requires something, but I'm not sure at theis point.
 
 =head1 METHODS
 
@@ -75,7 +71,7 @@ sub new {
 
  @pairs = $pairing->matchPlayers;
 
-Run a brain-dead algorithm that instead of pairing the players according to the rules creates matches between the nth and n+1th player of a score group, downfloating the last player of the group if the number of players is odd. If there is an odd number of total players, the last gets a Bye.
+Run a brain-dead algorithm that instead of pairing the players according to the rules creates matches between the nth and n+1th player of a score group, downfloating the last player of the group if the number of players is odd. If there is an odd number of total players, the last gets a Bye. TODO Returns different data than FIDE.
 
 =cut 
 
@@ -83,7 +79,8 @@ sub matchPlayers {
     my $self     = shift;
     my $brackets = $self->brackets;
     my $downfloater;
-    my @allMatches = @{ $self->matches };
+    # my @allMatches = @{ $self->matches };
+    my @allMatches;
     for my $n ( 0 .. $#$brackets ) {
         my @bracketMatches;
         my $players = $brackets->[$n]->members;

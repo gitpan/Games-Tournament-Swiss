@@ -1,7 +1,7 @@
 package Games::Tournament::Swiss::Procedure::FIDE;
 
-# Last Edit: 2007 Apr 04, 02:58:10 PM
-# $Id: $
+# Last Edit: 2007 Aug 22, 11:45:35 AM
+# $Id: /swiss/trunk/lib/Games/Tournament/Swiss/Procedure/FIDE.pm 1295 2007-08-22T04:24:15.418710Z greg  $
 
 use warnings;
 use strict;
@@ -12,32 +12,30 @@ use constant FIRSTROUND => $Games::Tournament::Swiss::Config::firstround;
 use base qw/Games::Tournament::Swiss/;
 use Games::Tournament::Contestant::Swiss;
 
-use constant {
-    C1        => 'C1',
-    C2        => 'C2',
-    C3        => 'C3',
-    C4        => 'C4',
-    C5        => 'C5',
-    C6PAIRS   => 'C6PAIRS',
-    C6OTHERS  => 'C6OTHERS',
-    C7        => 'C7',
-    C8        => 'C8',
-    C9        => 'C9',
-    C10       => 'C10',
-    REPEATC10 => 'REPEATC10',
-    C11       => 'C11',
-    C12       => 'C12',
-    C13       => 'C13',
-    C14       => 'C14',
-    FLOAT     => "FLOAT",
-    START     => "START",
-    LAST      => "LAST",
-    ERROR     => "ERROR",
-    MATCH     => "MATCH",
-    NEXT      => "NEXT",
-    PREV      => "PREV",
-    COLORS    => "COLORS",
-};
+use constant    C1        => 'C1';
+use constant    C2        => 'C2';
+use constant    C3        => 'C3';
+use constant    C4        => 'C4';
+use constant    C5        => 'C5';
+use constant    C6PAIRS   => 'C6PAIRS';
+use constant    C6OTHERS  => 'C6OTHERS';
+use constant    C7        => 'C7';
+use constant    C8        => 'C8';
+use constant    C9        => 'C9';
+use constant    C10       => 'C10';
+use constant    REPEATC10 => 'REPEATC10';
+use constant    C11       => 'C11';
+use constant    C12       => 'C12';
+use constant    C13       => 'C13';
+use constant    C14       => 'C14';
+use constant    FLOAT     => "FLOAT";
+use constant    START     => "START";
+use constant    LAST      => "LAST";
+use constant    ERROR     => "ERROR";
+use constant    MATCH     => "MATCH";
+use constant    NEXT      => "NEXT";
+use constant    PREV      => "PREV";
+use constant    COLORS    => "COLORS";
 
 =head1 NAME
 
@@ -64,10 +62,6 @@ our $VERSION = '0.02';
 =head1 DESCRIPTION
 
 FIDE Swiss Rules C 04.1 Based on Rating describes an algorithm to pair players. The algorithm starts with the highest bracket, and then pairs each bracket in turn. ending with the lowest bracket, floating players up and down to find acceptable matches, but also undoing pairings in higher score groups, if this will help the pairing of lower score groups. This module pairs players on the basis of that algorithm.
-
-=head1 REQUIREMENTS
-
-I will require something
 
 =head1 METHODS
 
@@ -110,7 +104,7 @@ sub new {
  @pairs = $pairing->matchPlayers;
 
 Run the FIDE C 04.1 algorithm adding matches to $pairing->matches.
-
+TODO I started passing round the args, rather than storing them in the object, because of problems with storing. What were those problems? What does matchPlayers return? Is it a hash or the matches or what?
 =cut 
 
 sub matchPlayers {
@@ -823,6 +817,7 @@ sub c10 {
     my $matches = delete $args{matches};
     pop @$matches;
     $group->{didC10} = 1;
+    $groups->[$index] = $group;
     return C7, matches => $matches, brackets => $groups, %args;
 }
 
@@ -889,9 +884,10 @@ sub c11 {
         {
             $group = $group->{remainderof};
             delete $matches->[$index];
-            print "Undoing all Bracket $bracket matches\n";
+            print "Undoing all Bracket $bracket matches";
         }
         $group->{c8swapper} = $group->c8iterator;
+	print "\n";
         return C3, matches => $matches, brackets => $groups, %args;
     }
     print "C11, x=p=$p already, no more x increases in Bracket $bracket.\n";
@@ -1007,10 +1003,13 @@ sub c13 {
     }
     my $penultimate = $groups->[ $index - 1 ];
     my ( $last, $penult ) = ( $index + 1, $index );
+    $group = $group->{remainderof} if $group->{remainderof};
+    $members = $group->members;
     my $pprime = $penultimate->pprime;
     #die "index=$index,but matches=$#$matches"
     #    		unless $#$matches == $index;
     delete $matches->[ $index - 1 ];
+    delete $matches->[ $index ];
     print "Undoing Bracket $index matches. ";
     my @lastMemberIds = map { $_->id } @$members;
     my $residents     = $group->residents;
@@ -1019,10 +1018,12 @@ sub c13 {
         my $resident = $_;
         not grep { $resident->id == $_->id } @floaters
     } @$residents;
-    $groups->[$index]->exit($_) for @floaters;
+    $group->exit($_) for @floaters;
     $_->floating('')            for @floaters;
     $penultimate->reentry($_)   for @floaters;
     delete $args{badpair};
+    $groups->[$index] = $group;
+    $groups->[$index-1] = $penultimate;
     if ( $pprime > 0 ) {
         print "Re-pairing Bracket $penult, p=$pprime. ";
         print
@@ -1040,10 +1041,12 @@ qq/Unfloating @{[map {$_->id." ".$_->floating.", "} @floaters]} back. /
           %args;
     }
     else {
-        $groups->[$index]->exit($_)  for @others;
+        $group->exit($_)  for @others;
         $_->floating('Up')           for @others;
         $penultimate->entry($_)      for @others;
         $penultimate->naturalize($_) for @others;
+	$groups->[$index] = $group;
+	$groups->[$index-1] = $penultimate;
         print "Joining Bracket $penult, $last. ";
         print
 "Bracket $last: @lastMemberIds => Bracket $penult: @{[map {$_->id} @{$groups->[$index-1]->members}]}\n";
@@ -1119,8 +1122,8 @@ Decrease p (pprime) by 1 (and if the original value of x was greater than zero d
 sub c14 {
     my $self   = shift;
     my %args   = @_;
-    my $index  = $args{index};
-    my $groups = $args{brackets};
+    my $index  = delete $args{index};
+    my $groups = delete $args{brackets};
     print "C14,\t";
     my $group   = $groups->[$index];
     my $members = $group->members;
@@ -1134,16 +1137,29 @@ sub c14 {
     $group->pprime($pprime);
     $group->xprime($x);
     $group->{criterion}->{$_} = 'Up&Down' for qw/B5 B6/;
-    print "Bracket " . ( $args{index} + 1 ) . ", now p=$pprime\n";
-    return ( C4, %args ) if $pprime > 0;
-    $self->float(
-        floaters  => $members,
-        direction => "Down",
-        index     => $index,
-        brackets  => $groups,
-        %args
-    );
-    return C1, %args;
+    print "Bracket " . ( $index+1 ) . ", now p=$pprime\n";
+    if ($pprime > 0) {return ( C4, %args );}
+    else {
+	my @evacuees = @$members;
+	my $nextgroup = $groups->[$index+1];
+        $group->exit($_)  for @evacuees;
+        $_->floating('Down')           for @evacuees;
+        $nextgroup->entry($_)      for @evacuees;
+        $nextgroup->naturalize($_) for @evacuees;
+	$groups->[$index] = $group;
+	$groups->[$index+1] = $nextgroup;
+	my ($this, $next) = ($index+1, $index+2);
+	my @thisMemberIds = map { $_->id } @evacuees;
+	my @nextMemberIds = map { $_->id } @{$nextgroup->members};
+        print "Moving down all Bracket $this, to $next. ";
+        print
+	"Bracket $this: @thisMemberIds => Bracket $next: @nextMemberIds\n";
+	# splice @$groups, $index, 1;
+        return C1,
+	index => @{ [ $index + 1 ] },
+          brackets => $groups,
+          %args;
+    }
 }
 
 
@@ -1178,16 +1194,27 @@ sub colors {
     for my $i ( 0 .. $p - 1 ) {
         my @pair = ( $s1->[$i], $s2->[$i] );
         my @rolehistory = ( map { $pair[$_]->roles } 0, 1 );
-        my @round = map {
-            my $r = $_;
-            [ map { $_->[$r] } @rolehistory ]
-        } 0 .. ($round) - ( FIRSTROUND + 1 );
-        my @roundh;
-        for ( 0 .. $#round ) {
-            push @roundh, $round[$_]
-              if 2 == grep { $_ eq (ROLES)[0] or $_ eq (ROLES)[1] }
-              @{ $round[$_] };
-        }
+	#my @round = map {
+        #    my $r = $_;
+        #    [ map { $_->[$r] } @rolehistory ]
+        #} 0 .. ($round) - ( FIRSTROUND + 1 );
+	my @lastdiff;
+	for my $round ( 1 .. $round - FIRSTROUND )
+	{
+	    my $s1role = $rolehistory[0]->[-$round];
+	    my $s2role = $rolehistory[1]->[-$round];
+	    next if $s1role eq $s2role;;
+            next unless 2 == grep { $_ eq (ROLES)[0] or $_ eq (ROLES)[1] }
+		    ($s1role, $s2role);
+	    @lastdiff = ($s1role, $s2role);
+	    last;
+	}
+	#my @roundh;
+        #for ( 0 .. $#round ) {
+        #    push @roundh, $round[$_]
+        #      if 2 == grep { $_ eq (ROLES)[0] or $_ eq (ROLES)[1] }
+        #      @{ $round[$_] };
+        #}
         my ( $contestants, $stronger, $diff );
         my @roles     = map { $_->preference->role } @pair;
         my @strengths = map { $_->preference->strength } @pair;
@@ -1257,9 +1284,9 @@ sub colors {
             };
             $rule = 'E2';
         }
-        elsif ( defined( $diff = ( grep { $_->[0] ne $_->[1] } @roundh )[0] ) )
+        elsif ( @lastdiff )
         {
-            $contestants = { $diff->[1] => $pair[0], $diff->[0] => $pair[1] };
+            $contestants = {$lastdiff[1] => $pair[0], $lastdiff[0] => $pair[1]};
             $rule = 'E3';
         }
         else {

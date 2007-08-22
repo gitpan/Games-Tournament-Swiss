@@ -1,6 +1,6 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Feb 22, 02:14:28 PM
+# Last Edit: 2007 Apr 10, 12:31:05 PM
 # $Id: $
 
 use warnings;
@@ -33,10 +33,6 @@ our $VERSION = '0.01';
 =head1 DESCRIPTION
 
 In a tournament, there are contestants, and matches over rounds between the contestants, in which they are differentiated by role. TODO firstround and roles.
-
-=head1 REQUIREMENTS
-
-Installing this module requires Module::Build.
 
 =head1 METHODS
 

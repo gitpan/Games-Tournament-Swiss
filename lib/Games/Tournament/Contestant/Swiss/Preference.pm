@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss::Preference;
 
-# Last Edit: 2007 Feb 22, 09:58:53 PM
+# Last Edit: 2007 Aug 20, 10:17:28 PM
 # $Id: $
 
 use warnings;
@@ -30,12 +30,8 @@ our $VERSION = '0.01';
 
 =head1 DESCRIPTION
 
-The preference, or expectation/right/duty one has with reference to a role, eg White, in the next round depends on the difference between the number of games previously played in it and in the alternative roles, and is either Mild, Strong, or Absolute. The more games played in other roles than in this role, the greater the right/duty to play the next game in this role. The FIDE Swiss Rules (C04.1) represent the difference as the number of Games as White minus the number as Black, so a greater number of games as Black is a negative number and of White a positive number. For equal number of games, +0 indicates the last game was as White, and -0 indicates the last game was as Black. So +0 represents a Mild preference for Black and -0 for White. This implementation uses a 'direction' field internally to perform the same function.
+The preference, or expectation/right/duty one has with reference to a role, eg White, in the next round depends on the difference between the number of games previously played in it and in the alternative roles, and is either Mild, Strong, or Absolute. The more games played in other roles than in this role, the greater the right/duty to play the next game in this role. The FIDE Swiss Rules (C04.1) represent the difference as the number of Games as White minus the number as Black, so a greater number of games as Black is a negative number and of White a positive number. For equal number of games, +0 indicates the last game was as White, and -0 indicates the last game was as Black. So +0 represents a Mild preference for Black and -0 for White. This implementation uses a 'direction' field to perform the same function as the +/- sign.
 As an API, the strength method returns 'Mild', 'Strong', or 'Absolute' and the role method returns 'Black', 'White', or whatever the preferred role is, respecting the 2 consecutive games in the same role rule. A7
-
-=head1 REQUIREMENTS
-
-Module::Build to install.
 
 =head1 METHODS
 
@@ -173,7 +169,7 @@ sub difference {
 
 	$pref->direction('Black')
 
-Sets/gets the role which the player has taken more often than other alternative roles. The preference is thus for the other role.
+Sets/gets the role which the player has taken more often, or more recently, than other alternative roles. The preference is thus for the other role.
 
 =cut
 

@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Config;
 
-# Last Edit: 2007 Feb 22, 10:11:12 PM
+# Last Edit: 2007 Aug 20, 10:20:23 PM
 # $Id: $
 
 use warnings;
@@ -29,10 +29,6 @@ our $VERSION = '0.02';
 Actually, a swiss tournament is not just one kind of tournament, but a whole genre of tournaments. If you are using Games::Tournament::Swiss for other than chess tournaments, where the players take black and white roles, and score 0,0.5, or 1, for example, you probably want to configure it. You also might want to start swiss pairing at a random round in the tournament, in which case you will set firstround.
 
 The roles, scores, firstround, algorithm methods in this module are here just to stop perl warning about 'only one use, possible typo' warnings, with the use of fully qualified Games::Tournament::Swiss::Config package variables.
-
-=head1 REQUIREMENTS
-
-Installing this module requires Module::Build.
 
 =head1 METHODS
 
@@ -88,7 +84,7 @@ sub roles {
     my $roles = shift;
     if ($roles) { $self->{roles} = $roles; }
     elsif ( $self->{roles} ) { return @{ $self->{roles} }; }
-    else { return qw/Black White/; }
+    else { return qw/White Black/; }
 }
 
 

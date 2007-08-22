@@ -1,5 +1,17 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+pairingtable - Show player scoregroups for next round of swiss tournament
+
+=head1 VERSION
+
+0.04
+
+=cut
+
+our $VERSION = '0.04';
+
 use strict;
 use warnings;
 
@@ -53,7 +65,7 @@ for my $round ( @rounds )
 		my $results = LoadFile( "./scores/$round.yaml" );
 		for my $game ( @$games )
 		{
-			my %result;
+			my (%score, %result);
 			my $total;
 			my @roles =  keys %{ $game->contestants }; 
 			my @contestants = map {$_->id} values
@@ -61,17 +73,24 @@ for my $round ( @rounds )
 			for my $role ( @roles )
 			{
 				my $player = $game->contestants->{$role};
-				my $result = $results->{$player->id};
-				$total += $result;
-				$result{$role} =
-					$role eq 'Bye'? $player
-				      : $result == $scores->{win}    ? 'Win'
-				      : $result == $scores->{draw}   ? "Draw"
-				      : $result == $scores->{loss}   ? "Loss"
-				      : $result == $scores->{absent} ? 'Absent'
-				      : "Error";
+				my $result = $results->{$player->name};
+				warn "$player->{name} got $result in round $game->{round}"
+							unless defined $result;
+				$result{$role} = $result;
+				$score{$role} =
+				    $role =~ m/Bye/i ? $scores->{bye}
+				  : $result =~ m/Win/i ? $scores->{win}
+				  : $result =~ m/Draw/i ? $scores->{draw}
+				  : $result =~ m/Loss/i ? $scores->{loss}
+				  : $result =~ m/Absent/i ? $scores->{absent}
+				  : "Error";
+				$total += $score{$role};
 			}
-			die "total scores in round $round game with players @contestants not 1" if $total != 1;
+			die "total scores in round $round game with players @contestants not $total"
+			unless $total == $scores->{win} + $scores->{loss} or 
+			$total == 2 * $scores->{draw} or
+			$total == $scores->{draw} + $scores->{absent} or
+			$total == 2 * $scores->{absent};
 			$game->result( \%result );
 		}
 	}
@@ -131,13 +150,9 @@ for my $bracket ( @brackets )
 
 __END__
 
-=head1 NAME
-
-pair - Pair players for the next round of a swiss tournament
-
 =head1 SYNOPSIS
 
-pair
+pairingtable
 
 Options:
 
@@ -145,53 +160,11 @@ Options:
 
 --man            A man page
 
---id 9598457	Id of person claiming these beans to be theirs
-
---name Momotaro	Name of person claiming these beans to be theirs
-
---session first	The part of the semester in which the beans were won
-
---team Gray	The team to which the claimant belongs
-
---league m/j	The league to which the claimant belongs
-
---beans 75	Number of beans they are asking to be recorded 
-
-=head1 OPTIONS
-
-=over 8
-
-=item B<-id>
-
-Id of person claiming these beans to be theirs.
-
-=item B<-name>
-
-Name of person claiming these beans to be theirs.
-
-=item B<-league>
-
-The league to which the redeemer belongs
-
-=item B<-session>
-
-The session in which the beans were won.
-
-=item B<-team>
-
-The team to which the claimant belongs.
-
-=item B<-beans>
-
-Number of beans they are asking to be recorded.
-
-=back
-
 =head1 DESCRIPTION
 
-B<pair> tallies beans that students have earned for classwork and are redeeming and stores them in beans.yaml as a total, logging their entry in beans.log. The separate script, B<grades> adds the total (divided by 5) to homework, midterm and final scores and outputs the grade so far.
+B<pairingtable> shows the scoregroups that players with equal scores fall into, allowing calculation of who will play who in the next round. Included is place so far, opponents each player has already met, the roles in the previous rounds, downfloating (and upfloating) in the previous round (D) and in the round before the previous round (d).
 
-The configuration file, league.yaml, in the directory above contains tournament entrants, series, members fields.
+Run it in the directory league.yaml is in, it will show pairgroups for the next round following the highest existing in the directory. Run it in a round directory, it will show pairgroups for the round after that round.
 
 =cut
 

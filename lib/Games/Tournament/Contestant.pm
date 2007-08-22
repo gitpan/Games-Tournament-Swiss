@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant;
 
-# Last Edit: 2007 Apr 04, 03:01:32 PM
+# Last Edit: 2007 Aug 21, 02:16:55 PM
 # $Id: $
 
 use warnings;
@@ -32,10 +32,6 @@ our $VERSION = '0.02';
 =head1 DESCRIPTION
 
 A generic tournament/series player/team contestant object.
-
-=head1 REQUIREMENTS
-
-Module::Build to install.
 
 =head1 METHODS
 
@@ -188,7 +184,7 @@ sub writeCard {
 	$rounds = $deepblue->score
 	next if $deepblue->score
 
-	Returns the total score over the rounds in which $deepblue has a score. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check any cards. 
+Returns the total score over the rounds in which $deepblue has a score. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check any cards. Internally, this method accumulates the results of all the rounds into a total score, unless no results exist. If they don't exist, a hash key $self->{score} is consulted. A hack to allow importing a pairing table.
 
 =cut
 
@@ -196,6 +192,7 @@ sub score {
     my $self        = shift;
     my %converter   = SCORES;
     my $scores      = $self->scores;
+    return $self->{score} || 0 unless defined $scores;
     my %lcconverter = map { lc($_) => $converter{$_} } keys %converter;
     my %scores      = map { $_ => lc $scores->{$_} } keys %$scores;
     for my $round ( keys %scores ) {
@@ -215,7 +212,7 @@ sub score {
 	$rounds = $deepblue->met(@grandmasters)
 	next if $deepblue->met($capablanca)
 
-	Returns an anonymous array either of the rounds in which $deepblue remembers meeting the members of @grandmasters or of the empty string '' if there is no record of such a meeting. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check $deepblue's partners' cards. (Assumes players do not meet more than once!)
+Returns an anonymous array either of the rounds in which $deepblue remembers meeting the members of @grandmasters or of the empty string '' if there is no record of such a meeting. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check $deepblue's partners' cards. (Assumes players do not meet more than once!)
 This is same as Games::Tournament::met or different?
 
 =cut
@@ -262,7 +259,7 @@ sub name {
 
 	$member->title('Grandmaster')
 
-	Sets/gets the title of the contestant, a courtesy given to the contestant.
+Sets/gets the title of the contestant, a courtesy given to the contestant.
 
 =cut
 

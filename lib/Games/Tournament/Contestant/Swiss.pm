@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Apr 04, 07:31:43 AM
+# Last Edit: 2007 Aug 21, 01:23:41 PM
 # $Id: $
 
 use warnings;
@@ -28,19 +28,19 @@ our $VERSION = '0.01';
     ...
 
 =head1 DESCRIPTION
+
 Subclasses Games::Tournament::Contestant with Games::Tournament::Swiss-specific data and methods, like pairingNumber, floats.
 
 Games::Tournament::Swiss will use this class when constructing a 'Bye' contestant.
-
-=head1 REQUIREMENTS
-
-Module::Build to install.
 
 =head1 METHODS
 
 =head2 new
 
-	Games::Tournament::Contestant::Swiss->new( rating => '15', name => 'Red Chessman', pairingNumber => 2, floats => [qw/None Down None None], roles => [qw/Black White Black White/] );
+	Games::Tournament::Contestant::Swiss->new( rating => '15',
+	    name => 'Red Chessman', pairingNumber => 2,
+	    floats => [qw/None Down None None],
+	    roles => [qw/Black White Black White/] );
 
 Actually, you don't want to assign pairing numbers this way. Let the assignPairingNumbers method in Games::Tournament::Swiss do it.
 
@@ -58,7 +58,7 @@ sub new() {
 
 	$member->preference
 
-A right (duty) to take a role, eg White or Black, in the next round, calculated as a function of the difference between the number of games previously played in the different roles, and accommodated according to its value, Mild, Strong, or Absolute. An Absolute preference of +2 for White is given when the contestant has played 2 (or a larger number) more of the previous rounds as Black than as White, or when the last 2 rounds were played as Black. A Strong preference of +1 for White represents having played one more round as Black than as White. A Mild preference of +0 occurs when the number of games played with both colors is the same, but the last game was played as Black. A Mild preference of -0 is the same, but with the last game being as White, the preference is for Black. Preferences of -1 and -2 represent the same situations as for +1 and +2, but with the roles reversed. Before the first round, the preference of the highest ranked player (+-0) is determined by lot. Returned is a Games::Tournament::Contestant::Swiss::Preference object. A7
+Gets (sets) $member's preference, or right (duty) to take a role, eg White or Black, in the next round, calculated as a function of the difference between the number of games previously played in the different roles, and accommodated according to its value, Mild, Strong, or Absolute. An Absolute preference of +2 for White is given when the contestant has played 2 (or a larger number) more of the previous rounds as Black than as White, or when the last 2 rounds were played as Black. A Strong preference of +1 for White represents having played one more round as Black than as White. A Mild preference of +0 occurs when the number of games played with both colors is the same, but the last game was played as Black. A Mild preference of -0 is the same, but with the last game being as White, the preference is for Black. Preferences of -1 and -2 represent the same situations as for +1 and +2, but with the roles reversed. Before the first round, the preference of the highest ranked player (+-0) is determined by lot.  A7
 
 =cut
 
@@ -100,19 +100,37 @@ sub oldId {
     elsif ( $self->{oldId} ) { return $self->{oldId}; }
 }
 
+=head2 opponents
+
+	$member->opponents( 0, 5, 11 )
+	$rolehistory = $member->opponents
+
+If ids (ie pairing numbers) are passed, adds them to the end of the list representing the latest opponents that $member has had in this tournament. (Normally one and only one parameter, the pairing number of the opponent in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, pass 0, 'Bye' or 'Absence'.
+
+=cut
+
+sub opponents {
+    my $self = shift;
+    my @opponents = @_;
+    if ( @opponents ) { push @{ $self->{opponents} }, @opponents; return }
+    elsif ( $self->{opponents} ) { return $self->{opponents}; }
+    else { return []; }
+}
+
+
 =head2 roles
 
 	$member->roles( 'Black' )
 	$rolehistory = $member->roles
 
-If a parameter is passed, adds this to the end of the list representing the old roles that $member has had in this tournament. If no parameter is passed, returns the list reference. If the member had no game or played no game, because of a bye, or an absence, pass 'None'.
+If parameters are passed, adds them to the end of the list representing the latest roles that $member has had in this tournament. (Normally one and only one parameter, the role in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, pass 'None'.
 
 =cut
 
 sub roles {
     my $self = shift;
-    my $role = shift;
-    if ( defined $role ) { push @{ $self->{roles} }, $role; }
+    my @roles = @_;
+    if ( @roles ) { push @{ $self->{roles} }, @roles; return }
     elsif ( $self->{roles} ) { return $self->{roles}; }
     else { return []; }
 }
@@ -141,8 +159,7 @@ sub floating {
 	$member->floats( $round, 'Down' )
 	$rolehistory = $member->floats
 
-# If a float is passed, adds this to a list representing the old floats that $member has had in this tournament. If no parameter is passed,  returns a list of all the floats. Remember, if the player was not floated, to pass 'None'. Otherwise, it won't be possible to tell which round the floats on the list correspond to. TODO Perhaps the other way, where an anonymous hash was used is better?
-If a round number and float is passed, adds this to an anonymous array representing the old floats that $member has had in this tournament. If only a round is passed, returns the float for that round. If no parameter is passed,  returns a anonymous hash of all the floats keyed on the round. If the player was not floated, pass 'None'.
+If a round number and float is passed, inserts this in an anonymous array representing the old floats that $member has had in this tournament. If only a round is passed, returns the float for that round. If no parameter is passed,  returns a anonymous array of all the floats indexed by the round. (Watch out for round 0, there. Heh-hey.) If the player was not floated, pass 'None'.
 
 =cut
 
@@ -156,6 +173,37 @@ sub floats {
     }
     elsif ( defined $round )  { return $self->{floats}->[$round]; }
     elsif ( $self->{floats} ) { return $self->{floats}; }
+}
+
+=head2 importPairtableRecord
+
+    $member->importPairtableRecord(
+	{ opponents => [ 6,4 ]
+	  roles => [ 'Win', 'Loss' ],
+	  floats => [ undef, 'None', 'Down' ],
+	  score => 1.5 } )
+
+Populate $member with data about opponents met, roles played, and floats received in previous rounds, which together with the total score will allow it to be paired with an appropriate opponent in the next round. Set $member's preference. Delete any pre-existing opponents, roles, floats, scores, score, or preference data.
+
+=cut
+
+
+sub importPairtableRecord {
+    my $self  = shift;
+    my $record = shift;
+    #die $self->name . ", " . $self->id . " pairtable record field lengths"
+    #    unless @{$record->{opponents}} == @{$record->{roles}} and
+    #    @{$record->{roles}} == @{$record->{floats}} - 1;
+    my ($opponents, $roles, $floats) = @$record{qw/opponents roles floats/};
+    delete @$self{qw/opponents roles floats scores score preference/};
+    $self->opponents(@$opponents);
+    $self->roles(@$roles);
+    for my $i ( 0 .. $#$floats ) { $self->floats( $i, $floats->[$i] ); }
+    use Games::Tournament::Contestant::Swiss::Preference;
+    $self->preference(Games::Tournament::Contestant::Swiss::Preference->new);
+    $self->preference->update( [ @$roles[0..$_] ] ) for 0.. $#$roles;
+    $self->{score} = $record->{score};
+    return;
 }
 
 =head1 AUTHOR

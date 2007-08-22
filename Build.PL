@@ -10,15 +10,14 @@ my $builder = Module::Build->new(
     create_makefile_pl  => 'traditional',
     build_requires => {
         'Test::More' => 0,
-    },
-	recommends => {
 	'YAML' => 0,
 	},
-    #script_files	=> [qw(
-    #    		    script_files/pair
-    #    		    script_files/pairingtable
-    #    		    script_files/crosstable
-    #    			)],
+    script_files	=> [qw(
+        		    script_files/pair
+        		    script_files/pairingtable
+        		    script_files/crosstable
+        		    script_files/pairstately
+        			)],
     add_to_cleanup      => [ 'Games-Tournament-Swiss-*' ],
 			);
 

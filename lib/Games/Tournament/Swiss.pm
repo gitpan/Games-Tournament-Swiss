@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Apr 04, 03:43:10 PM
+# Last Edit: 2007 Aug 22, 05:12:45 PM
 # $Id: $
 
 use warnings;
@@ -28,11 +28,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -54,10 +54,6 @@ our $VERSION = '0.04';
 =head1 DESCRIPTION
 
 In a Swiss tournament, there is a pre-declared number of rounds, each contestant meets every other contestant zero or one times, and in each round contestants are paired with other players with the same, or similar, scores.
-
-=head1 REQUIREMENTS
-
-Installing this module requires Module::Build.
 
 =head1 METHODS
 
@@ -151,7 +147,7 @@ sub collectCards {
               unless $game->{result}->{$role};
             $play->{$round}->{$id} = $game || "No game";
         }
-        else { warn "Player $id had no game in round $round"; }
+        else { warn "Player $id had no game in round $round"; $role = 'None'; }
         $entrant->scores($scores);
         die "No record in round $round for player $id $entrant->{name}"
           unless $play->{$round}->{$id};
@@ -266,7 +262,7 @@ sub formBrackets {
 
  $pairing = $tourney->pairing( \@groups );
 
-Returns a Games::Tournament::Swiss::Procedure object. The algorithm of the FIDE Handbook C 04.1 is hardcoded in.  Groups are Games::Tournament::Swiss::Brackets objects of contestants with the same score and they are ordered by score, the group with the highest score first, and the group with the lowest score last. This is the point where round i becomes round i+1. XXX I've forgotten why the for loops are empty.
+Returns a Games::Tournament::Swiss::Procedure object. Groups are Games::Tournament::Swiss::Brackets objects of contestants with the same score and they are ordered by score, the group with the highest score first, and the group with the lowest score last. This is the point where round i becomes round i+1.
 
 =cut
 
@@ -275,11 +271,6 @@ sub pairing {
     my $entrants = $self->entrants;
     my $brackets = shift;
     my $round    = $self->round;
-    #for my $bracket (@$brackets) {
-    #    my $players = $bracket->members;
-    #    for my $player (@$players) {
-    #    }
-    #}
     return Games::Tournament::Swiss::Procedure->new(
         round        => $round + 1,
         brackets     => $brackets,
@@ -296,7 +287,7 @@ sub pairing {
 	$games = $tourney->compatible
 	next if $games->{$alekhine->pairingNumber}->{$capablanca->pairingNumber}
 
-	Returns an anonymous hash, keyed on the pairing numbers (ids) of @grandmasters, indicating whether or not the individual @grandmasters could play each other in the next round. But what is the next round? This method uses the whoPlayedWho and colorClashes methods to remove incompatible players.
+Returns an anonymous hash, keyed on the pairing numbers (ids) of @grandmasters, indicating whether or not the individual @grandmasters could play each other in the next round. But what is the next round? This method uses the whoPlayedWho and colorClashes methods to remove incompatible players.
 
 =cut
 
@@ -323,9 +314,10 @@ sub compatible {
 =head2 whoPlayedWho
 
 	$games = $tourney->whoPlayedWho
-	next if $games->{$alekhine->pairingNumber}->{$capablanca->pairingNumber}
+	next if $games->{$alekhine->pairingNumber}->
+	    {$capablanca->pairingNumber}
 
-	Returns an anonymous hash, keyed on the pairing numbers (ids) of the tourney's entrants, of the round in which individual entrants met. Don't forget to collect scorecards in the appropriate games first! (No tracking of how many times players have met if they have met more than once!) B1
+Returns an anonymous hash, keyed on the pairing numbers (ids) of the tourney's entrants, of the round in which individual entrants met. Don't forget to collect scorecards in the appropriate games first! (No tracking of how many times players have met if they have met more than once!) Do you know what round it is? B1
 
 =cut
 
@@ -335,8 +327,8 @@ sub whoPlayedWho {
     my @ids     = map { $_->id } @$players;
     my $play    = $self->play;
     my $dupes;
-    my $round = $self->round;
-    for my $round ( FIRSTROUND .. $round ) {
+    my $lastround = $self->round;
+    for my $round ( FIRSTROUND .. $lastround ) {
         for my $id (@ids) {
             my $player = $self->ided($id);
             die "No player with $id id in round $round game of @ids"
@@ -366,7 +358,7 @@ sub whoPlayedWho {
 	$nomatch = $tourney->colorClashes
 	next if $nomatch->{$alekhine->id}->{$capablanca->id}
 
-	Returns an anonymous hash, keyed on the ids/pairing numbers of the tourney's entrants, of a color (role) if 2 of the individual @grandmasters both have an absolute preference for it in the next round and so can't play each other (themselves). Don't forget to collect scorecards in the appropriate games first! B2
+Returns an anonymous hash, keyed on the ids/pairing numbers of the tourney's entrants, of a color (role) if 2 of the individual @grandmasters both have an absolute preference for it in the next round and so can't play each other (themselves). Don't forget to collect scorecards in the appropriate games first! B2
 
 =cut
 
@@ -395,7 +387,7 @@ sub colorClashes {
 
 	next if $tourney->byesGone($grandmasters)
 
-	Returns an anonymous hash of either the round in which the tourney's entrants had a 'Bye' or the empty string, keyed on @$grandmasters' ids. If a grandmaster had more than one bye, the last one is returned. Don't forget to collect scorecards in the appropriate games first! B1
+Returns an anonymous hash of either the round in which the tourney's entrants had a 'Bye' or the empty string, keyed on @$grandmasters' ids. If a grandmaster had more than one bye, the last one is returned. Don't forget to collect scorecards in the appropriate games first! B1
 
 =cut
 
@@ -431,7 +423,7 @@ sub byesGone {
 	$nomatch = $tourney->incompatibles(@grandmasters)
 	next if $nomatch->{$alekhine->id}->{$capablanca->id}
 
-	Collates information from the whoPlayedWho and colorClashes methods to show who cannot be matched or given a bye in the next round, returning an anonymous hash keyed on the ids/pairing numbers of @grandmasters. B1,2 C1,6
+Collates information from the whoPlayedWho and colorClashes methods to show who cannot be matched or given a bye in the next round, returning an anonymous hash keyed on the ids/pairing numbers of @grandmasters. B1,2 C1,6
 
 =cut
 
@@ -467,16 +459,6 @@ sub medianScore {
     my $round = shift;
     return $round / 2;
 }
-
-#=head2 brackets
-#
-#	$tourney->brackets
-#
-#Gets/sets the score groups as an anonymous array of bracket objects. Score groups (brackets) are made up of players with the same/similar scores.
-#
-#=cut
-#
-#field 'brackets';
 
 =head2 rounds
 
