@@ -1,10 +1,11 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Aug 22, 05:12:45 PM
+# Last Edit: 2007 Sep 01, 09:08:47 AM
 # $Id: $
 
 use warnings;
 use strict;
+use Carp;
 
 use Games::Tournament::Swiss::Config;
 
@@ -28,11 +29,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.05
+Version 0.06
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 SYNOPSIS
 
@@ -138,12 +139,12 @@ sub collectCards {
         my $round = $game->round;
         my ( $role, $float );
         if ( $game and $game->isa("Games::Tournament::Card") ) {
-            $game->canonize;
+	    # $game->canonize;
             $role             = $game->myRole($entrant);
             $float            = $game->myFloat($entrant);
             $scores->{$round} = $game->{result}->{$role};
-            die
-"No result in round $round game with player $id $entrant->{name} in role $role"
+            carp
+"No result in round $round for player $id, $entrant->{name} as $role"
               unless $game->{result}->{$role};
             $play->{$round}->{$id} = $game || "No game";
         }

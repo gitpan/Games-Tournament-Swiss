@@ -50,7 +50,7 @@ my $ef = Games::Tournament::Card->new( round => 2, contestants => {Black => $f, 
 
 my $fg = Games::Tournament::Card->new( round => 3, contestants => {Black => $g, White => $f}, result => {Black => 'Loss'} );
 
-
+$_->canonize for $ah, $ac, $ae, $bg, $bh, $bd, $cf, $ch, $de, $dg, $ef, $fg;
 
 my $c2 = Games::Tournament::Contestant::Swiss->new( id => 3, name => 'Rog', score => 3, title => 'Expert', rating => '50', );
 my $h2 = Games::Tournament::Contestant::Swiss->new( id => 8, name => 'Red', score => 3, title => 'Novice', );

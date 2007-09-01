@@ -13,7 +13,8 @@ WriteMakefile
                            'script_files/crosstable',
                            'script_files/pair',
                            'script_files/pairingtable',
-                           'script_files/pairstately'
+                           'script_files/pairstately',
+                           'script_files/pairtable2yaml'
                          ],
           'PL_FILES' => {}
         )

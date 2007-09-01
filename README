@@ -1,14 +1,12 @@
 Games-Tournament-Swiss
 
-This is version 0.05 of Games::Tournament::Swiss. This is ALPHA-level software. It may not run. It will be slow. Although it attempts to implement the FIDE Swiss Rules, it may not pair players correctly. It may take over your computer, and force you to reboot. It may DESTROY your computer. Use at your own risk. If it does work, I reserve the right to change functionality and interfaces.
+This is version 0.06 of Games::Tournament::Swiss. This is ALPHA-level software. It may not run. It will be slow. Although it attempts to implement the FIDE Swiss Rules, it may not pair players correctly. It may take over your computer, and force you to reboot. It may DESTROY your computer. Use at your own risk. If it does work, I reserve the right to change functionality and interfaces.
 
-In this version, I fix a few bugs and get ready in the scripts to do less serialization (storing of the program's data structures in files between runs of the program) and to do it more in a manner that is understandable by the chess world. That is, I want to use pairing tables, cross tables and the like to maintain state, rather than the pure programming objects I am freezing into the tourney.yaml, player.yaml etc files at the moment. These tables will still take the form of YAML files, and won't be pairing tables, but the contents will be relatable by the user to pairing tables.
+In this version, I fix 'pair' to rely on a pairing table, rather than on serialization files (storing of the program's data structures between different rounds). 'pair' still generates serialization files, so if this rewriting of 'pair' doesn't work in following rounds, try 'pairstately' there instead. The pairing table is represented as a YAML data structure, but you can use 'pairtable2yaml' to generate a YAML version of the pairing table in a text file. However, you should be able to understand and write the YAML version by hand, if you want. It is pretty self-explanatory.
 
-All this means that scripts which were working are likely to break. If the version you were using was doing what you wanted after a fashion (ha-ha), then you are not likely to do better with this version.
+Again, scripts which were working are still likely to break. If the version you were using was doing what you wanted after a fashion (ha-ha), then you may not care to install this version.
 
-As part of my plan, I have renamed the script_files script, 'pair' to 'pairstately' to allow me to rework pair. So the take-home message for 2-time readers of this is, use 'pairstately' rather than 'pair.'
-
-For 1st-time readers, this program is run from a shell. You need to work from a command line and type commands. It also depends on perl to run. If you don't know anything about perl, you will have to learn something about installing it and running scripts, before you can use this software.
+This program is run from a shell. You need to work from a command line and type commands. It also depends on perl to run. If you don't know anything about perl, you will have to learn something about installing it and running scripts, before you can use this software.
 
 For perl on Windows, try the free download of ActiveState's distribution at http://www.activestate.com/store/activeperl, or the experimental Strawberry Perl http://win32.perl.org/wiki/index.php?title=Strawberry_Perl
 
@@ -38,9 +36,11 @@ The scripts assume that there is a directory in which a configuration file, call
 brackets.yaml  pairing.yaml  round.yaml
 matches.yaml   player.yaml   tourney.yaml
 
-are left in these subdirectories after pairing. Don't delete these, as they are what allows data to be carried over from round to round.
+are left in these subdirectories after pairing.
 
-Scores are in another subdirectory called scores. They are of the form 1.yaml, 2.yaml,.. You need to create these files yourself.
+Scores are in another subdirectory called scores. They are of the form 1.yaml, 2.yaml,.. You need to create these files, if you use 'pairstately'.
+
+You can create a pairing table with 'pairingtable,' convert it into YAML form with 'pairtable2yaml' and run 'pair.'
 
 DATA FILES
 
@@ -83,9 +83,11 @@ roles:
   - White
   - Black
 
+For the form of the pairing table and its YAML equivalent, see the documentation for 'pairtable2yaml.'
+
 GENERATING PAIRINGS
 
-Starting with an empty main directory, create league.yaml, and an empty subdirectory for the first round. Run the script, 'pairstately' in the empty round subdirectory. A log of the pairing is printed and 'round.yaml' in the directory contains the matches. After the games in the round are complete, in the scores subdirectory, enter the scores for the players in the file, '1.yaml', or whatever the round is. Then you can run 'crosstable' or 'pairingtable' in the original directory above the subdirectory, to get current standings. If there is a next round, make another empty subdirectory, named after it and continue as before.
+Starting with an empty main directory, create league.yaml, and an empty subdirectory for the first round. Run the script, 'pair' in the empty round subdirectory. A log of the pairing is printed and 'round.yaml' in the directory contains the matches. After the games in the round are complete, in the scores subdirectory, enter the scores for the players in the file, '1.yaml', or whatever the round is. Then you can run 'crosstable' or 'pairingtable' in the original directory above the subdirectory, to get current standings. Convert your pairing table into YAML form with 'pairtable2yaml' and copy it into a subdirectory for the next round, and continue as before.
 
 SUPPORT AND DOCUMENTATION
 

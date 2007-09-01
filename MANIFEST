@@ -17,11 +17,14 @@ lib/Games/Tournament/Swiss/Procedure/Dummy.pm
 script_files/pair
 script_files/pairstately
 script_files/pairingtable
+script_files/pairtable2yaml
 script_files/crosstable
 t/00-load.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
+t/four.t
+t/foura.t
 t/median.t
 t/pair.t
 t/pairing4.t

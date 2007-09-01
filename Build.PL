@@ -16,6 +16,7 @@ my $builder = Module::Build->new(
         		    script_files/pair
         		    script_files/pairingtable
         		    script_files/crosstable
+			    script_files/pairtable2yaml
         		    script_files/pairstately
         			)],
     add_to_cleanup      => [ 'Games-Tournament-Swiss-*' ],

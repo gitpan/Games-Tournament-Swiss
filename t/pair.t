@@ -72,10 +72,14 @@ my @matches = map { @$_ } @m;
 for my $match ( @matches )
 {
 	my @partners = $match->myPlayers;
-	next unless @partners == 2;
-	my ($stronger, $weaker) = $partners[0]->rating >= $partners[1]->rating ?
-		($partners[0], $partners[1]) : ($partners[1], $partners[0]);
-	$match->result({ $match->myRole($stronger) => 'Win' });
+	if (@partners == 2)
+	{
+		my ($stronger, $weaker) =
+			$partners[0]->rating >= $partners[1]->rating ?
+			($partners[0], $partners[1]) :
+			($partners[1], $partners[0]);
+		$match->result({ $match->myRole($stronger) => 'Win' });
+	}
 	$match->canonize;
 }
 $t->collectCards( @matches );

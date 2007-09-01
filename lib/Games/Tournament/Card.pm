@@ -1,6 +1,6 @@
 package Games::Tournament::Card;
 
-# Last Edit: 2007 Apr 10, 12:26:17 PM
+# Last Edit: 2007 Aug 25, 08:07:51 AM
 # $Id: $
 
 use warnings;
@@ -86,7 +86,7 @@ sub canonize {
                 $result{$role} = $result->{$role};
             }
             else {
-                die
+                warn
 "$result->{$role} result for player $contestant->{id} in round $round";
             }
             next ROLE;
@@ -105,7 +105,7 @@ sub canonize {
                   if $result->{$other} =~ m/^Draw$/i;
             }
             else {
-                die
+                warn
 "$result->{$role}, $result->{$other} result for player $contestant->{id} and opponent $opponent->{id} in round $round";
             }
         }
@@ -182,7 +182,7 @@ Returns the float for $player in $game, eg 'Up', 'Down' or 'None'.
 sub myFloat {
     my $self       = shift;
     my $contestant = shift;
-    $self->canonize;
+    # $self->canonize;
     my $float = $self->float($contestant);
 }
 

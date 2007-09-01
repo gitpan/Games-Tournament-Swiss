@@ -1,10 +1,19 @@
 ---
+version: 0.06
+date: Sep 1, 2007
+revision: about 1316
+changes:
+  - pairtable2yaml parses pairing table, emits YAML
+  - pair uses YAML pairing table instead of score files, YAML serialization files.
+  - Fixed bug #29023, test with t/foura.t 
+
+---
 version: 0.05
 date: August 2007
 revision: about 1300
 changes:
-  - Make crosstable, pairingtable also use letter scores: 28834
-  - Copying evacuees by reference meant when they exited group they were gone from the copy as well: 28797.
+  - Make crosstable, pairingtable also use letter scores: #28834
+  - Copying evacuees by reference meant when they exited group they were gone from the copy as well: #28797.
   - Scripts take game results from file with lines of form 'Capablanca, Jose Raul': Win
   - provide traditional Makefile.PL also
 

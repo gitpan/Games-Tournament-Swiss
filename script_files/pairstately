@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Aug 22, 03:43:59 PM
-# $Id: /swiss/trunk/script_files/pairstately 1301 2007-08-22T09:02:55.756136Z greg  $
+# Last Edit: 2007 Aug 23, 03:58:53 PM
+# $Id: /swiss/trunk/script_files/pairstately 1306 2007-08-23T08:26:32.335759Z greg  $
 
 use strict;
 use warnings;
@@ -104,6 +104,7 @@ my $playedGames;
 if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
     $playedGames = LoadFile "../$previous/matches.yaml";
     if ( my @games = $tourney->unmarkedCards(@$playedGames) ) {
+	my $n=0;
         for my $game (@games) {
 	    my @contestants = map {$_->id} values %{$game->contestants};
             my (%score, %result);
@@ -112,7 +113,7 @@ if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
                 my $player = $game->contestants->{$role};
                 next unless $player
                   and $player->isa('Games::Tournament::Contestant');
-                my $result = $results->{ $player->name };
+                my $result = $results->{$n}->{ $player->name };
 		warn "$player->{name}, $player->{id} playing $role got $result in round $game->{round}"
 					unless defined $result;
 		$result{$role} = $result;
@@ -133,6 +134,7 @@ if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
 	    $total == 2 * $scores->{absent};
             $game->result( \%result );
 	    # $game->canonize;
+	    $n++;
         }
     }
     $tourney->collectCards(@$playedGames);

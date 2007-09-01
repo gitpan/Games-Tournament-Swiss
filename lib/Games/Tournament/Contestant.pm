@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant;
 
-# Last Edit: 2007 Aug 21, 02:16:55 PM
+# Last Edit: 2007 Aug 25, 09:18:29 AM
 # $Id: $
 
 use warnings;
@@ -8,6 +8,7 @@ use strict;
 
 use base qw/Games::Tournament/;
 use List::Util qw/sum/;
+use List::MoreUtils qw/all/;
 use constant SCORES => %Games::Tournament::Swiss::Config::scores;
 
 # use overload qw/0+/ => 'id', qw/""/ => 'name', fallback => 1;
@@ -184,15 +185,18 @@ sub writeCard {
 	$rounds = $deepblue->score
 	next if $deepblue->score
 
-Returns the total score over the rounds in which $deepblue has a score. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check any cards. Internally, this method accumulates the results of all the rounds into a total score, unless no results exist. If they don't exist, a hash key $self->{score} is consulted. A hack to allow importing a pairing table.
+Gets/sets the total score over the rounds in which $deepblue has a score. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check any cards. Internally, this method accumulates the results of all the rounds into a total score, unless no results exist. If they don't exist, a hash key $self->{score} is consulted. You can set the score this way too, bypassing the elegant code to do it from individual game results stored by the Games::Tournament::Contestant object. A hack to allow importing a pairing table.
 
 =cut
 
 sub score {
     my $self        = shift;
     my %converter   = SCORES;
+    my $score = shift;
+    if ( defined $score ) { $self->{score} = $score; }
     my $scores      = $self->scores;
-    return $self->{score} || 0 unless defined $scores;
+    return $self->{score} || 0 unless defined $scores and
+		all { defined $_ } values %$scores;
     my %lcconverter = map { lc($_) => $converter{$_} } keys %converter;
     my %scores      = map { $_ => lc $scores->{$_} } keys %$scores;
     for my $round ( keys %scores ) {
