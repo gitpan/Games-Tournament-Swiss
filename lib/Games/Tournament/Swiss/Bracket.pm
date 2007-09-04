@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Apr 25, 11:26:29 PM
+# Last Edit: 2007 Sep 03, 11:06:29 PM
 # $Id: $
 
 use warnings;
@@ -154,7 +154,7 @@ sub upFloaters {
 
 	$pairables = $bracket->residents
 
-Returns the members includeable in pairing procedures for this bracket because they haven't been floated out, or because they have been floated in. That is, they are not an emigrant. At any one point, a player is resident in one and only one bracket. At some other point, they may be a resident of another bracket.
+Returns the members includeable in pairing procedures for this bracket because they haven't been floated out, or because they have been floated in. That is, they are not an emigrant. At any one point, a player is resident in one and only one bracket, unless they are in transit. At some other point, they may be a resident of another bracket.
 
 =cut
 
@@ -300,12 +300,12 @@ sub resetS1 {
     return [] unless $#$members >= 1;
     my @downfloaters = $self->downFloaters;
     my @s1;
-    if ( @downfloaters and @downfloaters * 2 <= $#$members + 1 ) {
+    if ( @downfloaters and $self->hetero ) {
         @s1 = @downfloaters;
     }
     else {
         my @members = @{ $self->members };
-        my $p       = $self->pprime;
+        my $p       = $self->p;
         use Games::Tournament;
 
         # @s1 = ( $self->rank(@members) )[ 0 .. $n / 2 - 1 ];
@@ -361,7 +361,7 @@ sub resetS2 {
 
  $tables = $group->p
 
-Half the number of players in a homogeneous bracket, rounded down to the next lowest integer. Or the number of down floaters in a heterogeneous bracket. Also the number of players in S1, and thus the number of pairings in the pair group. TODO How does c2345 handle more downfloaters than S2? It will have to treat the bracket as homogeneous. (See A1,2)A6
+Half the number of players in a homogeneous bracket, rounded down to the next lowest integer. Or the number of down floaters in a heterogeneous bracket. Also the number of players in S1, and thus the number of pairings in the pair group. (See A1,2)A6
 
 =cut
 
@@ -371,7 +371,7 @@ sub p {
     return 0 unless $#$members >= 1;
     my @downfloaters = $self->downFloaters;
     my $p;
-    if ( @downfloaters and @downfloaters * 2 <= @{ $self->members } ) {
+    if ( @downfloaters and $self->hetero ) {
         $p = @downfloaters;
     }
     else {
@@ -462,17 +462,21 @@ sub xprime {
 
 	$group->hetero
 
-Gets (but doesn't set) whether this group is heterogeneous, ie includes players who have been downfloated from a higher score group, or upfloated from a lower score group, or if it is homogeneous, ie every player has the same score.
-A group with more down-floated members than number of matches is regarded as homogeneous.
+Gets (but doesn't set) whether this group is heterogeneous, ie includes players who have been downfloated from a higher score group, or upfloated from a lower score group, or if it is homogeneous, ie every player has the same score. A group where half or more of the members have come from a higher bracket is regarded as homogeneous. We use the scores of the players, rather than a floating flag.
 
 =cut
 
 sub hetero {
     my $self = shift;
-    ( not $self->downFloaters || $self->upFloaters ) ? return 0
-      : ( $self->downFloaters and $self->p and $self->downFloaters > $self->p )
-      ? return 0
-      : return 1;
+    my @members = @{$self->members};
+    my %tally;
+    %tally = map { my $score=$_->score; $score,++$tally{$score} } @members;
+    my @range = keys %tally;
+    return 0 if @range == 1;
+    my $min = min @range;
+    return 0 if $tally{$min} <= @members/2;
+    return 1 if $tally{$min} > @members/2;
+    return;
 }
 
 
@@ -484,7 +488,7 @@ sub hetero {
 	    create match cards;
 	}
 
-Gets the next permutation of the second-half players in D1 transposition counting order, as used in C7, that will not have the same incompatible player in the bad position found in the present transposition.
+Gets the next permutation of the second-half players in D1 transposition counting order, as used in C7, that will not have the same incompatible player in the bad position found in the present transposition. If you get an illegal modulus error, check your $firstmismatch is a possible value.
 
 =cut
 
@@ -492,6 +496,7 @@ sub c7shuffler {
     my $self     = shift;
     my $position = shift;
     my $s2       = $self->s2;
+    die "pos $position past end of S2" if $position > $#$s2;
     my @players  = $self->rank(@$s2);
     my $p        = $self->p;
     my @pattern;
@@ -508,6 +513,8 @@ sub c7shuffler {
     @nextPattern[ $position + 1 .. $#pattern ] =
       (0) x ( $#pattern - $position );
     for my $digit ( reverse( 0 .. $position ) ) {
+	die "${digit}th digit overrun of @pattern \@pattern" if
+						    @pattern == $digit;
         $nextPattern[$digit] = ++$value % ( @pattern - $digit );
         last unless $nextPattern[$digit] == 0;
     }

@@ -1,6 +1,6 @@
 package Games::Tournament::Card;
 
-# Last Edit: 2007 Aug 25, 08:07:51 AM
+# Last Edit: 2007 Sep 02, 09:45:50 PM
 # $Id: $
 
 use warnings;
@@ -39,7 +39,7 @@ In a tournament, matches take place in rounds between contestants, who are maybe
 	    contestants => {Black => $knicks, White => $deepblue},
 	    result => { Black => 'Win', White => 'Loss' },
 	    floats => { Black => 'Up', White => 'Down' }, or 
-	    floats => { Black => 'None', White => 'None' }
+	    floats => { Black => 'Not', White => 'Not' }
     );
     $bye = Games::Tournament:Card->new(
 	    round => 1,
@@ -175,7 +175,7 @@ sub myRole {
 
     $game->myFloat($player)
 
-Returns the float for $player in $game, eg 'Up', 'Down' or 'None'.
+Returns the float for $player in $game, eg 'Up', 'Down' or 'Not'.
 
 =cut 
 
@@ -235,9 +235,9 @@ sub result {
 
 =head2 float
 
-	$card->float($player[,'Up|Down|None'])
+	$card->float($player[,'Up|Down|Not'])
 
-Gets/sets whether the player was floated 'Up', 'Down', or 'None' floated.
+Gets/sets whether the player was floated 'Up', 'Down', or 'Not' floated.
 
 =cut
 
@@ -255,7 +255,7 @@ sub float {
     if ( defined $float ) { $self->{floats}->{$role} = $float; }
     elsif ( $self->{floats}->{$role} ) { return $self->{floats}->{$role}; }
     elsif ( $role eq 'Bye' ) { return 'Down'; }
-    else { return 'None'; }
+    else { return 'Not'; }
 }
 
 =head1 AUTHOR

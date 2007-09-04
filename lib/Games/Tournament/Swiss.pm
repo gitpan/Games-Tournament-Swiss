@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Sep 01, 09:08:47 AM
+# Last Edit: 2007 Sep 04, 03:06:34 PM
 # $Id: $
 
 use warnings;
@@ -29,11 +29,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.06
+Version 0.07
 
 =cut
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 =head1 SYNOPSIS
 
@@ -136,10 +136,11 @@ sub collectCards {
             grep { $id == $_->{id} } $_->myPlayers
         } @games;
         my $game  = $game[0];
-        my $round = $game->round;
+        my $round;
         my ( $role, $float );
         if ( $game and $game->isa("Games::Tournament::Card") ) {
 	    # $game->canonize;
+	    $round = $game->round;
             $role             = $game->myRole($entrant);
             $float            = $game->myFloat($entrant);
             $scores->{$round} = $game->{result}->{$role};
@@ -398,7 +399,7 @@ sub byesGone {
     my $players = $self->entrants;
     my @ids     = map { $_->id } @$players;
     my $play    = $self->play;
-    my $byes;
+    my $byes = {};
     my $round = $self->round;
     for my $round ( FIRSTROUND .. $round ) {
         for my $id (@ids) {

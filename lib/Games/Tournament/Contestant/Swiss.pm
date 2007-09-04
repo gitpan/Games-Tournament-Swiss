@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Aug 21, 01:23:41 PM
+# Last Edit: 2007 Sep 02, 09:45:32 PM
 # $Id: $
 
 use warnings;
@@ -39,7 +39,7 @@ Games::Tournament::Swiss will use this class when constructing a 'Bye' contestan
 
 	Games::Tournament::Contestant::Swiss->new( rating => '15',
 	    name => 'Red Chessman', pairingNumber => 2,
-	    floats => [qw/None Down None None],
+	    floats => [qw/Not Down Not Not],
 	    roles => [qw/Black White Black White/] );
 
 Actually, you don't want to assign pairing numbers this way. Let the assignPairingNumbers method in Games::Tournament::Swiss do it.
@@ -123,7 +123,7 @@ sub opponents {
 	$member->roles( 'Black' )
 	$rolehistory = $member->roles
 
-If parameters are passed, adds them to the end of the list representing the latest roles that $member has had in this tournament. (Normally one and only one parameter, the role in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, pass 'None'.
+If parameters are passed, adds them to the end of the list representing the latest roles that $member has had in this tournament. (Normally one and only one parameter, the role in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, pass 'Not'.
 
 =cut
 
@@ -159,7 +159,7 @@ sub floating {
 	$member->floats( $round, 'Down' )
 	$rolehistory = $member->floats
 
-If a round number and float is passed, inserts this in an anonymous array representing the old floats that $member has had in this tournament. If only a round is passed, returns the float for that round. If no parameter is passed,  returns a anonymous array of all the floats indexed by the round. (Watch out for round 0, there. Heh-hey.) If the player was not floated, pass 'None'.
+If a round number and float is passed, inserts this in an anonymous array representing the old floats that $member has had in this tournament. If only a round is passed, returns the float for that round. If no parameter is passed,  returns a anonymous array of all the floats indexed by the round. (Watch out for round 0, there. Heh-hey.) If the player was not floated, pass 'Not'.
 
 =cut
 
@@ -180,7 +180,7 @@ sub floats {
     $member->importPairtableRecord(
 	{ opponents => [ 6,4 ]
 	  roles => [ 'Win', 'Loss' ],
-	  floats => [ undef, 'None', 'Down' ],
+	  floats => [ undef, 'Not', 'Down' ],
 	  score => 1.5 } )
 
 Populate $member with data about opponents met, roles played, and floats received in previous rounds, which together with the total score will allow it to be paired with an appropriate opponent in the next round. Set $member's preference. Delete any pre-existing opponents, roles, floats, scores, score, or preference data.

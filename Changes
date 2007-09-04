@@ -1,4 +1,12 @@
 ---
+version: 0.07
+date: Sep 4, 2007
+revision: about 1334
+changes:
+  - refactored FIDE.pm to test pairings in C6PAIRS for all p possibilities, rather than just first pprime ones.
+  - reworked C13, C14 to handle http://www.chesschat.org/showthread.php?t=6619, with cc6619 test.
+
+---
 version: 0.06
 date: Sep 1, 2007
 revision: about 1316
