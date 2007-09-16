@@ -5,6 +5,8 @@ WriteMakefile
           'NAME' => 'Games::Tournament::Swiss',
           'VERSION_FROM' => 'lib/Games/Tournament/Swiss.pm',
           'PREREQ_PM' => {
+                           'IO::All' => '0',
+                           'List::MoreUtils' => '0',
                            'Test::More' => '0',
                            'YAML' => '0'
                          },

@@ -8,10 +8,13 @@ my $builder = Module::Build->new(
     dist_author         => 'Dr Bean <drbean, followed by the at mark (@), cpan, then a dot, and finally, org>',
     dist_version_from   => 'lib/Games/Tournament/Swiss.pm',
     create_makefile_pl  => 'traditional',
-    build_requires => {
-        'Test::More' => 0,
-	'YAML' => 0,
-	},
+    requires            => { 'List::MoreUtils' => 0 },
+    build_requires      => {
+				'Test::More' => 0,
+				'YAML' => 0,
+				'IO::All' => 0,
+				},
+    recommends => { YAML => 0, 'IO::All' => 0, 'Parse::RecDescent' => 0 },
     script_files	=> [qw(
         		    script_files/pair
         		    script_files/pairingtable

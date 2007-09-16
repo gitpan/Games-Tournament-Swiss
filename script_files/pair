@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Sep 01, 08:32:43 AM
-# $Id: /swiss/trunk/script_files/pair 1313 2007-09-01T01:01:33.125763Z greg  $
+# Last Edit: 2007 Sep 14, 10:40:00 PM
+# $Id: /swiss/trunk/script_files/pair 1364 2007-09-14T15:30:19.454286Z greg  $
 
 =head1 NAME
 
@@ -31,11 +31,11 @@ my $scores = $league->{scores} ||
 	{ win => 1, loss => 0, draw => 0.5, absent => 0, bye => 1 };
 my $firstround = $league->{firstround} || $swiss->firstround;
 my $algorithm = $league->{algorithm} || 'Games::Tournament::Swiss::Procedure::FIDE';
+my $abbrev = $league->{abbreviation} ||
+    { W => 'White', B => 'Black', 1 => 'Win', 0 => 'Loss',
+	0.5 => 'Draw', '=' => 'Draw'  };
 
-$scores = $swiss->frisk($scores);
-$roles = $swiss->frisk($roles);
-$firstround = $swiss->frisk($firstround);
-$algorithm = $swiss->frisk($algorithm);
+$swiss->frisk($scores, $roles, $firstround, $algorithm, $abbrev);
 
 $Games::Tournament::Swiss::Config::firstround = $firstround;
 %Games::Tournament::Swiss::Config::scores = %$scores;

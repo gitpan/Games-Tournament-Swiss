@@ -1,6 +1,6 @@
 #!usr/bin/perl
 
-# testing script_files/pair
+# test script_files/pairstately
 
 use lib qw/t lib/;
 
@@ -47,7 +47,7 @@ title: Unknown
 DumpFile './league.yaml', {member => \@members};
 mkdir '1';
 chdir '1';
-system 'perl ../script_files/pair';
+system 'perl ../script_files/pairstately';
 
 my $round = LoadFile './round.yaml';
 my @tests = (
@@ -66,10 +66,50 @@ my @tests = (
   $round->{group}->{1}->{White} eq 'LaLa Lakers'), 'S1 players different roles']
 );
 
-my @files = glob './*';
-unlink @files;
+my $round1 = Load(<<'...');
+---
+0:
+  'Your New Nicks': 1
+  'Jose Capablanca': 0
+1:
+  'LaLa Lakers': 1
+  'Alexander Alekhine': 0
+...
+
 chdir '..';
-rmdir '1';
+mkdir './scores';
+DumpFile './scores/1.yaml', $round1;
+mkdir '2';
+chdir '2';
+system 'perl ../script_files/pairstately';
+
+$round = LoadFile './round.yaml';
+push @tests, (
+[ $round->{round} == 2, 'round 2'],
+[ ($round->{group}->{0}->{White} eq 'Your New Nicks' and
+  $round->{group}->{0}->{Black} eq 'LaLa Lakers' or
+  $round->{group}->{0}->{Black} eq 'Your New Nicks' and
+  $round->{group}->{0}->{White} eq 'LaLa Lakers'), '$m1 is LaLa&Nicks'],
+[ ($round->{group}->{1}->{White} eq 'Alexander Alekhine' and
+  $round->{group}->{1}->{Black} eq 'Jose Capablanca' or
+  $round->{group}->{1}->{Black} eq 'Alexander Alekhine' and
+  $round->{group}->{1}->{White} eq 'Jose Capablanca'), '$m2 is Alex&Jose'],
+[ ($round->{group}->{0}->{White} eq 'Your New Nicks' and
+  $round->{group}->{1}->{White} eq 'Alexander Alekhine' or
+  $round->{group}->{0}->{Black} eq 'Your New Nicks' and
+  $round->{group}->{1}->{Black} eq 'Alexander Alekhine'), 'S1,2 same roles']
+);
+
+chdir '..';
+my @rounds = ( 1..2 );
+for my $dir ( 'scores', @rounds )
+{
+	chdir "./$dir";
+	my @files = glob './*';
+	unlink @files;
+	chdir '..';
+	rmdir "./$dir";
+}
 unlink './league.yaml', './league.yaml.bak';
 
 plan tests => $#tests + 1;

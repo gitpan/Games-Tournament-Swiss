@@ -28,7 +28,11 @@ t/four.t
 t/foura.t
 t/median.t
 t/pair.t
+t/pairstately.t
+t/pairing.t
 t/pairing4.t
+t/pairingtable.t
+t/pairtable2yaml.t
 t/seven.t
 t/tally.t
 Makefile.PL

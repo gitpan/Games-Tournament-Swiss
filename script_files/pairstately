@@ -1,12 +1,13 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Aug 23, 03:58:53 PM
-# $Id: /swiss/trunk/script_files/pairstately 1306 2007-08-23T08:26:32.335759Z greg  $
+# Last Edit: 2007 Sep 16, 09:16:38 AM
+# $Id: /swiss/trunk/script_files/pairstately 1375 2007-09-16T01:22:33.928040Z greg  $
 
 use strict;
 use warnings;
 
 use YAML qw/LoadFile DumpFile/;
+use List::MoreUtils qw/all any/;
 
 use Games::Tournament::Swiss::Config;
 
@@ -19,11 +20,11 @@ my $scores = $league->{scores} ||
 	{ win => 1, loss => 0, draw => 0.5, absent => 0, bye => 1 };
 my $firstround = $league->{firstround} || $swiss->firstround;
 my $algorithm = $league->{algorithm} || 'Games::Tournament::Swiss::Procedure::FIDE';
+my $abbrev = $league->{abbreviation} ||
+    { W => 'White', B => 'Black', 1 => 'Win', 0 => 'Loss',
+	0.5 => 'Draw', '=' => 'Draw'  };
 
-$scores = $swiss->frisk($scores);
-$roles = $swiss->frisk($roles);
-$firstround = $swiss->frisk($firstround);
-$algorithm = $swiss->frisk($algorithm);
+$swiss->frisk($scores, $roles, $firstround, $algorithm, $abbrev);
 
 $Games::Tournament::Swiss::Config::firstround = $firstround;
 %Games::Tournament::Swiss::Config::scores = %$scores;
@@ -50,6 +51,21 @@ unless ($round < $firstround)
     my $scoresdirectory;
     $scoresdirectory = exists $league->{hw}? $league->{hw} : "../scores";
     $results = LoadFile( "$scoresdirectory/$previous.yaml" );
+    my @tables;
+    if ( @tables = (keys %$results) and all {ref} @{$results}{@tables} ) {
+	for my $table ( @tables ) {
+	    for my $player ( keys %{$results->{$table}} ) {
+		my $result = $results->{$table}->{$player};
+		if ( exists $scores->{$result} )
+		{ $results->{$player} = $result; }
+		elsif ( $abbrev->{$result} )
+		{ $results->{$player} = $abbrev->{$result}; }
+		else { die
+"Player $player on table $table in round $round got $result?";
+		}
+	    }
+	}
+    }
     DumpFile "$scoresdirectory/$previous.yaml.bak", $results;
 }
 
@@ -104,7 +120,6 @@ my $playedGames;
 if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
     $playedGames = LoadFile "../$previous/matches.yaml";
     if ( my @games = $tourney->unmarkedCards(@$playedGames) ) {
-	my $n=0;
         for my $game (@games) {
 	    my @contestants = map {$_->id} values %{$game->contestants};
             my (%score, %result);
@@ -113,7 +128,7 @@ if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
                 my $player = $game->contestants->{$role};
                 next unless $player
                   and $player->isa('Games::Tournament::Contestant');
-                my $result = $results->{$n}->{ $player->name };
+                my $result = $results->{ $player->name };
 		warn "$player->{name}, $player->{id} playing $role got $result in round $game->{round}"
 					unless defined $result;
 		$result{$role} = $result;
@@ -134,7 +149,6 @@ if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
 	    $total == 2 * $scores->{absent};
             $game->result( \%result );
 	    # $game->canonize;
-	    $n++;
         }
     }
     $tourney->collectCards(@$playedGames);
@@ -253,14 +267,19 @@ member:
     rating: 2780
     title: Unknown
 
-If you are using your own scoring scheme, and colors (called, roles), see the example in t/tennis in the distribution. You can add your own data to the member records. A pairing number is generated for the players, so don't include a pairing number, unless this is a player introduced into the tournament after the first round. The new id (ie pairing number) is added to league.yaml. This is a bit tricky. I am working with names here (eg with the absentees and the pairings left in round.yaml). TODO Configuration of your own scoring scheme looks like it is broken.
+You can use your own scoring scheme, and colors (called, roles). You can add your own data to the member records. A pairing number is generated for the players, so don't include a pairing number, unless this is a player introduced into the tournament after the first round. The new id (ie pairing number) is added to league.yaml. This is a bit tricky. I am working with names here (eg with the absentees and the pairings left in round.yaml). TODO Configuration of your own scoring scheme looks like it is broken.
 The score files: 1.yaml, etc, are of the form:
 
-'Laver, Rod': Loss
-'Sampras, Pete': Draw
-'McEnroe, John': Bye
+1:
+  - 'Laver, Rod': Loss
+  - 'Sampras, Pete': Win
+2: 
+  - 'McEnroe, John': Bye
 
-First number is the name of the player. (Every name will have to be unique.) The second is the result for that player.
+Alternatively, you can use number scores, and '=' etc. The old form of a mapping of names to results is still OK, but I will probably stop supporting it. First is the name of the player. (Every name will have to be unique.) Second is the result for that player.
+
+eg 
+'Laver, Rod': Loss
 
 I was using score files of the form:
 
@@ -269,8 +288,6 @@ I was using score files of the form:
 3: 0.5
 
 The use of pairing numbers rather than names has some advantages.
-
-Check the examples in t/tennis in the distribution.
 
 =item B<GENERATING PAIRINGS>
 

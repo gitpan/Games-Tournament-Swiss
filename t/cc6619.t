@@ -1,5 +1,8 @@
 #!usr/bin/perl
 
+# http://chesschat.org/showthread.php?t=6619
+# the pairings accepted in this test are disputable
+
 use lib qw/t lib/;
 
 use strict;
@@ -173,25 +176,24 @@ for my $round ( 1..$lastround )
 my @b = $tourney->formBrackets;
 my $pairing  = $tourney->pairing( \@b );
 my %p        = $pairing->matchPlayers;
-my @m = @{ $p{matches} };
+my @m = map { @$_ } @{ $p{matches} };
 $tourney->round(5);
 
 my @tests = (
-[ $m[1][0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m[2][0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m[2][1]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $m[2][2]->isa('Games::Tournament::Card'),	'$m2 isa'],
-[ $m[2][3]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $one == $m[1][0]->contestants->{White},	'$m0 White'],
-[ $three == $m[1][0]->contestants->{Black},	'$m0 Black'],
-[ $ten == $m[2][0]->contestants->{White},	'$m0 White'],
-[ $two == $m[2][0]->contestants->{Black},	'$m0 Black'],
-[ $six == $m[2][1]->contestants->{White},	'$m1 White'],
-[ $seven == $m[2][1]->contestants->{Black},	'$m1 Black'],
-[ $four == $m[2][2]->contestants->{White},	'$m2 White'],
-[ $eight == $m[2][2]->contestants->{Black},	'$m2 Black'],
-[ $nine == $m[2][3]->contestants->{White},	'$m3 White'],
-[ $five == $m[2][3]->contestants->{Black},	'$m3 Black'],
+[ $m[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
+[ $m[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $m[2]->isa('Games::Tournament::Card'),	'$m2 isa'],
+[ $m[3]->isa('Games::Tournament::Card'),	'$m3 isa'],
+[ $one == $m[0]->contestants->{White},	'$m0 White'],
+[ $three == $m[0]->contestants->{Black},	'$m0 Black'],
+[ $ten == $m[1]->contestants->{White},	'$m0 White'],
+[ $two == $m[1]->contestants->{Black},	'$m0 Black'],
+[ $six == $m[2]->contestants->{White},	'$m1 White'],
+[ $seven == $m[2]->contestants->{Black},	'$m1 Black'],
+[ $four == $m[3]->contestants->{White},	'$m2 White'],
+[ $eight == $m[3]->contestants->{Black},	'$m2 Black'],
+[ $nine == $m[4]->contestants->{White},	'$m3 White'],
+[ $five == $m[4]->contestants->{Black},	'$m3 Black'],
 );
 
 plan tests => $#tests + 1;

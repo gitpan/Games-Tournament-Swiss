@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Sep 03, 11:06:29 PM
+# Last Edit: 2007 Sep 14, 03:24:55 PM
 # $Id: $
 
 use warnings;
@@ -280,39 +280,7 @@ sub s1 {
         return $s1;
     }
     elsif ( $self->{s1} ) { return $self->{s1}; }
-    else { $self->resetS1; }
-}
-
-
-=head2 resetS1
-
- $group->s1
- $s1 = $group->s1($players)
- $s1 = $group->s1
-
-Resetter of s1 to the original members before exchanges with s2. A6
-
-=cut
-
-sub resetS1 {
-    my $self    = shift;
-    my $members = $self->residents;
-    return [] unless $#$members >= 1;
-    my @downfloaters = $self->downFloaters;
-    my @s1;
-    if ( @downfloaters and $self->hetero ) {
-        @s1 = @downfloaters;
-    }
-    else {
-        my @members = @{ $self->members };
-        my $p       = $self->p;
-        use Games::Tournament;
-
-        # @s1 = ( $self->rank(@members) )[ 0 .. $n / 2 - 1 ];
-        @s1 = ( $self->rank(@members) )[ 0 .. $p - 1 ];
-    }
-    $self->{s1} = \@s1;
-    return \@s1;
+    else { $self->resetS12; return $self->{s1}; }
 }
 
 
@@ -320,7 +288,7 @@ sub resetS1 {
 
  $s2 = $group->s2
 
-Getter of the players in a homogeneous or a heterogeneous bracket who aren't in S1. A6
+Getter/Setter of the players in a homogeneous or a heterogeneous bracket who aren't in S1. A6
 
 =cut
 
@@ -332,28 +300,38 @@ sub s2 {
         return $s2;
     }
     elsif ( $self->{s2} ) { return $self->{s2}; }
-    else { $self->resetS2; }
+    else { $self->resetS12; return $self->{s2}; }
 }
 
 
-=head2 resetS2
+=head2 resetS12
 
- @s2 = $group->resetS2
+ $group->resetS12
 
-Resets of the players in a homogeneous or a heterogeneous bracket who aren't in S1. TODO This resets S1 too. Shouldn't be resetting s1 too, but what is the right way? A6
+Resetter of S1 and S2 to the original members, ranked before exchanges in C8. A6
 
 =cut
 
-sub resetS2 {
+sub resetS12 {
     my $self    = shift;
     my $members = $self->residents;
-    my $s1      = $self->resetS1;
-    my @s1      = map { $_->{id} } @$s1;
-    my %isS1    = ();
-    @isS1{@s1} = (1) x @s1;
-    my @s2 = grep { not defined( $isS1{ $_->id } ) } @$members;
+    return [] unless $#$members >= 1;
+    my @downfloaters = $self->downFloaters;
+    my (@s1, @s2);
+    use Games::Tournament;
+    if ( @downfloaters and $self->hetero ) {
+        @s1 = @downfloaters;
+	my %downfloaters = map { $_->id => $_ } @downfloaters;
+	@s2 = grep { not exists $downfloaters{$_->id} } $self->rank(@$members);
+    }
+    else {
+        my $p       = $self->p;
+        @s1 = ( $self->rank(@$members) )[ 0 .. $p - 1 ];
+        @s2 = ( $self->rank(@$members) )[ $p .. $#$members ];
+    }
+    $self->{s1} = \@s1;
     $self->{s2} = \@s2;
-    return \@s2;
+    return;
 }
 
 
@@ -495,9 +473,12 @@ Gets the next permutation of the second-half players in D1 transposition countin
 sub c7shuffler {
     my $self     = shift;
     my $position = shift;
+    my $bigLastGroup = shift;
     my $s2       = $self->s2;
     die "pos $position past end of S2" if $position > $#$s2;
     my @players  = $self->rank(@$s2);
+    @players  = $self->reverseRank(@$s2) if $bigLastGroup;
+    # my @players  = @$s2;
     my $p        = $self->p;
     my @pattern;
     my @playerCopy = @players;
@@ -590,7 +571,7 @@ sub c7iterator {
 	    next if grep {$incompat{$s1[$_]}{$s2[$_]}} 0..$p-1);
 	}
 
-Creates an iterator for the exchange of @s1 and @s2 players in D2 order, as used in C8. Exchanges are performed in order of the difference between the pairing numbers of the players exchanged. If the difference is equal, the exchange with the lowest player is to be performed first. TODO This last requirement is fudged here for convenience. TODO Only as many players as in S1 can be matched, so does this mean some exchanges don't have an effect?
+Creates an iterator for the exchange of @s1 and @s2 players in D2 order, as used in C8. Exchanges are performed in order of the difference between the pairing numbers of the players exchanged. If the difference is equal, the exchange with the lowest player is to be performed first. XXX Only as many players as in S1 can be matched, so does this mean some exchanges don't have an effect? I don't understand the description when there are an odd number of players. There appears to be a bug with only 3 players. 1 and 2 should be swapped, I think. I think the order of exchanges of 2 players each may also have some small inconsistencies with the FIDE order.
 
 =cut 
 
@@ -600,9 +581,9 @@ sub c8iterator {
     my $p         = $self->p;
     my @exchanges = map {
         my $i = $_;
-        map { [ [ $_, $_ + $i ] ] }
-          reverse( ( max 1, $p - $i ) .. ( min $p- 1, 2 * ( $p - 1 ) - $i ) )
-    } ( 1 .. 2 * ( $p - 1 ) - 1 );
+        map { [ [ $_, $_+$i ] ] }
+          reverse( ( max 1, $p-$i ) .. ( min $p-1, 2*($p-1)-$i ) )
+    } ( 1 .. 2*($p-1)-1 );
     my @s1pair = map {
         my $i = $_;
         map { [ $i - $_, $i ] } 1 .. $i - 1
@@ -623,11 +604,13 @@ sub c8iterator {
     } 0 .. ( $p - 1 ) * ( $p - 2 ) - 2;
     push @exchanges, @exchanges2;
     return sub {
-        print "exchange $n:\t";
-        my $newShuffler = $self->c7iterator;
-        $self->{c7shuffler} = $newShuffler;
+        print "exchange " . ($n+1) . ":\t";
         return () unless $exchanges[$n];
-        my @members = @{ $self->members };
+	# my @members = @{ $self->members };
+	$self->resetS12;
+	my $s1 = $self->s1;
+	my $s2 = $self->s2;
+	my @members = (@$s1, @$s2);
         ( $members[ $_->[0] ], $members[ $_->[1] ] ) =
           ( $members[ $_->[1] ], $members[ $_->[0] ] )
           for @{ $exchanges[$n] };

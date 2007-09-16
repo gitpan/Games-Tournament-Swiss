@@ -1,7 +1,7 @@
 package Games::Tournament::Swiss::Procedure::FIDE;
 
-# Last Edit: 2007 Sep 04, 02:56:18 PM
-# $Id: /swiss/trunk/lib/Games/Tournament/Swiss/Procedure/FIDE.pm 1332 2007-09-04T06:57:24.797617Z greg  $
+# Last Edit: 2007 Sep 14, 09:08:44 PM
+# $Id: /swiss/trunk/lib/Games/Tournament/Swiss/Procedure/FIDE.pm 1365 2007-09-14T22:38:32.900035Z greg  $
 
 use warnings;
 use strict;
@@ -131,7 +131,7 @@ sub matchPlayers {
         C11, [ \&c11, C3, C13, C14 ],
         C12,    [ \&c12,    PREV, C14 ],
         C13,    [ \&c13,    C7, C1 ],
-        C14,    [ \&c14,    C1, C4, C13 ],
+        C14,    [ \&c14,    NEXT, C4, C13 ],
         NEXT,   [ \&next,   C1, LAST ],
         PREV,   [ \&prev,   C1 ],
         LAST,  [ undef, LAST ],
@@ -228,29 +228,17 @@ sub c1 {
     }
     else {
       PLAYER: for my $player (@$members) {
-            my $failures  = 0;
-            my @possibles = grep { $_ != $player } @$members;
-            my @ids       = map { $_->pairingNumber } @possibles;
-            foreach my $possibility ( @$alreadyPlayed{@ids} ) {
-                next PLAYER
-                  unless grep { $_ == $player->pairingNumber }
-						      keys %$possibility;
-                $failures++;
+	  my $id = $player->id;
+            my $rejections  = 0;
+            my @candidates = grep { $_ != $player } @$members;
+            my @ids       = map { $_->pairingNumber } @candidates;;
+            foreach my $candidate ( @ids ) {
+		if ( $alreadyPlayed->{$id}->{$candidate} ) { $rejections++; }
+		elsif ( $colorClashes->{$id}->{$candidate} ) { $rejections++; }
             }
-            if ( $failures >= @possibles or @possibles == 0 ) {
-                print "B1a: NOK. " unless @unpairables;
-                print $player->id . " ";
-                push @unpairables, $player;
-            }
-            foreach my $possibility ( @$colorClashes{@ids} ) {
-                next PLAYER
-                  unless grep { $_ == $player->pairingNumber }
-						      keys %$possibility;
-                $failures++;
-            }
-            if ( $failures >= @possibles or @possibles == 0 ) {
-                print "B2a: NOK. " unless @unpairables;
-                print $player->id . " ";
+            if ( $rejections >= @candidates or @candidates == 0 ) {
+                print "NOK. " unless @unpairables;
+                print $id . " ";
                 push @unpairables, $player;
             }
         }
@@ -448,8 +436,9 @@ sub c4 {
     my $groups  = $args{brackets};
     my $group   = $groups->[$index];
     my $members = $group->members;
-    my $s1      = $group->resetS1;
-    my $s2      = $group->resetS2;
+    $group->resetS12;
+    my $s1      = $group->s1;
+    my $s2      = $group->s2;
     print
       "C4, S1 & S2: @{[map{ $_->{id} } @$s1]} & @{[map{ $_->{id} } @$s2]}\n";
 
@@ -619,7 +608,7 @@ sub c6pairs {
 	    {
 		$nonpaired[$pos] = [ undef, $s2->[$pos] ];
 	    }
-	    if (not $group->hetero or grep { defined } @nonpaired == 1 )
+	    if (not $group->hetero or (grep { defined } @nonpaired) == 1 )
 	    {
 		for my $pos ( 0 .. $#$s2 ) {
 		    my @floaters = grep { defined $_ and
@@ -678,7 +667,7 @@ sub c6pairs {
 	}
 	elsif ( $pair[0]-> score == $pair[1]->score )
 	{
-	    map { $_->floating('') } @pair;
+	    map { $_->floating('Not') } @pair;
 	}
 	else {
 	    $pair[0]->floating('Up');
@@ -777,8 +766,7 @@ sub c7 {
 
     unless (@newS2) {
         print "last transposition\n";
-        $group->resetS1;
-        $group->resetS2;
+        $group->resetS12;
         return ( C8, brackets => $groups, %args ) unless $group->hetero;
         return ( REPEATC10, brackets => $groups, %args )
           if $group->hetero
@@ -1077,7 +1065,7 @@ sub backtrack {
 
  Games::Tournament::Swiss::Procedure->c13
 
-If the lowest score group contains a player who cannot be paired without violating B1 or B2 or who, if they are the only player in the group, cannot be given a bye (B2b), the pairing of the penultimate score bracket is undone.  Try to find another pairing in the penultimate score bracket which will allow a pairing in the lowest score bracket. If in the penultimate score bracket p becomes zero (i.e. no pairing can be found which will allow a correct pairing for the lowest score bracket) then the two lowest score brackets are joined into a new lowest score bracket. Because now another score bracket is the penultimate one C13 can be repeated until an acceptable pairing is obtained. TODO The first condition subsumes B2b. I need to move the bye granting code out of here. XXX I am popping the last match off if $index == $#$matches. Perhaps all the players from the penultimate bracket were floated down. Do I need to identify which bracket the  matches more securely? Perhaps for more than one bracket, all were floated down.
+If the lowest score group contains a player who cannot be paired without violating B1 or B2 or who, if they are the only player in the group, cannot be given a bye (B2b), the pairing of the penultimate score bracket is undone.  Try to find another pairing in the penultimate score bracket which will allow a pairing in the lowest score bracket. If in the penultimate score bracket p becomes zero (i.e. no pairing can be found which will allow a correct pairing for the lowest score bracket) then the two lowest score brackets are joined into a new lowest score bracket. Because now another score bracket is the penultimate one C13 can be repeated until an acceptable pairing is obtained. TODO The first condition subsumes B2b. I need to move the bye granting code out of here. XXX I am popping the last match off if $index == $#$matches. Perhaps all the players from the penultimate bracket were floated down. Do I need to identify which bracket the  matches came from more securely? Perhaps for more than one bracket, all were floated down.
 
 =cut 
 
@@ -1092,7 +1080,7 @@ sub c13 {
       unless $index == $#$groups;
     my $group   = $groups->[$index];
     my $members = $group->members;
-    my $penultpPrime = $args{penultpPrime};
+    my $penultpPrime = delete $args{penultpPrime};
     if ( @$members == 1 and not defined $penultpPrime ) {
         my $byer = $members->[0];
 	my $id = $byer->id;
@@ -1125,14 +1113,13 @@ sub c13 {
 	return ERROR,
 	msg => "All joined into one bracket, but no pairings! Sorry", %args;
     }
-    # my $penultimate = $groups->[ $index - 1 ];
-    # $penultimate = $penultimate->{remainderof} if $penultimate->{remainderof};
     my $penultimate = $self->previousBracket;
+    # $penultimate = $penultimate->{remainderof} if $penultimate->{remainderof};
     $group = $group->{remainderof} if $group->{remainderof};
     my ( $last, $penult ) = ( $index + 1, $index );
-    # my $penultpPrime = $penultimate->pprime;
-    delete $matches->[ $index - 1 ];
-    delete $matches->[ $index ];
+    delete $matches->[ - 1 ];
+    # delete $matches->[ $index - 1 ];
+    # delete $matches->[ $index ];
     print "Undoing Bracket $penult matches. ";
     my @lastMemberIds = map { $_->id } @$members;
     my $residents     = $group->residents;
@@ -1162,7 +1149,7 @@ sub c13 {
 "Bracket $last: @lastMemberIds => Bracket $penult: @{[map {$_->id} @{$groups->[$index-1]->members}]}\n";
         splice @$groups, $index, 1;
         return C1,
-	    penultpPrime => $penultpPrime,
+	  # penultpPrime => $penultpPrime,
           index => @{ [ $index - 1 ] },
           matches  => $matches,
           brackets => $groups,
@@ -1303,7 +1290,7 @@ sub c14 {
         print
 	"Bracket $this: @thisMemberIds => Bracket $next: @nextMemberIds\n";
 	# splice @$groups, $index, 1;
-        return C1,
+        return NEXT,
 	index => @{ [ $index + 1 ] },
           brackets => $groups,
           %args;
@@ -1444,7 +1431,7 @@ sub colors {
           );
     }
     print "\n";
-    push @{ $allMatches->[$index] }, @bracketMatches;
+    push @$allMatches, \@bracketMatches;
     $self->previousBracket($group);
     return C6OTHERS, matches => $allMatches, %args;
 }

@@ -1,4 +1,16 @@
 ---
+version: 0.08
+date: Sep 16, 2007
+revision: about 1374
+changes:
+  - reorder S2 before C8 swapping: bartolin #29258
+  - C1 tests of B1, B2 incompatibility were not cooperating.
+  - separate remainder group pairing recording: #29073
+  - round number passing/guessing in cross/pairingtable scripts: bartolin #29125
+  - pairstately supports abbreviation, scores grouped by table: bartolin #28834
+  - test that pair, pairstately, pairingtable, pairtable2yaml work
+
+---
 version: 0.07
 date: Sep 4, 2007
 revision: about 1334

@@ -1,5 +1,8 @@
 #!usr/bin/perl
 
+# 7 players who neither win nor lose any match. ie all are draws.
+# TODO pairing 4th round produces doubled players!
+
 use lib qw/t lib/;
 
 use strict;
@@ -73,113 +76,104 @@ $t->initializePreferences until $one->preference->role eq 'White';
 my @b = $t->formBrackets;
 my $pairing  = $t->pairing( \@b );
 my %p        = $pairing->matchPlayers;
-my @m = @{ $p{matches} };
+my @m = map { @$_ } @{ $p{matches} };
 $t->round(1);
 
 my @tests = (
-[ $m[0][0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m[0][1]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $m[0][2]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $m[0][3]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $one == $m[0][0]->contestants->{White},	'$m0 White'],
-[ $four == $m[0][0]->contestants->{Black},	'$m0 Black'],
-[ $two == $m[0][1]->contestants->{Black},	'$m1 Black'],
-[ $five == $m[0][1]->contestants->{White},	'$m1 White'],
-[ $three == $m[0][2]->contestants->{White},	'$m2 White'],
-[ $six == $m[0][2]->contestants->{Black},	'$m2 Black'],
-[ $seven == $m[0][3]->contestants->{Bye},	'$m3 Bye'],
+[ $m[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
+[ $m[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $m[2]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $m[3]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $one == $m[0]->contestants->{White},	'$m0 White'],
+[ $four == $m[0]->contestants->{Black},	'$m0 Black'],
+[ $two == $m[1]->contestants->{Black},	'$m1 Black'],
+[ $five == $m[1]->contestants->{White},	'$m1 White'],
+[ $three == $m[2]->contestants->{White},	'$m2 White'],
+[ $six == $m[2]->contestants->{Black},	'$m2 Black'],
+[ $seven == $m[3]->contestants->{Bye},	'$m3 Bye'],
 );
 
-my @matches = map { @$_ } @m;
-for my $match ( @matches )
+for my $match ( @m )
 {
 	$match->result({Black => 'Draw', White => 'Draw' }) 
 			unless $match->result;
 }
-$t->collectCards( @matches );
+$t->collectCards( @m );
 my @b2 = $t->formBrackets;
 my $p2  = $t->pairing( \@b2 );
 my %p2        = $p2->matchPlayers;
-my @m2 = @{ $p2{matches} };
+my @m2 = map { @$_ } @{ $p2{matches} };
 $t->round(2);
 
 push @tests, (
-[ $m2[1][0]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $m2[1][1]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $m2[1][2]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $m2[1][3]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $seven == $m2[1][0]->contestants->{White},	'@m2 White0'],
-[ $one == $m2[1][0]->contestants->{Black},	'@m2 Black0'],
-[ $three == $m2[1][1]->contestants->{Black},	'@m2 Black1'],
-[ $two == $m2[1][1]->contestants->{White},	'@m2 White1'],
-[ $six == $m2[1][2]->contestants->{White},	'@m2 White2'],
-[ $five == $m2[1][2]->contestants->{Black},	'@m2 Black2'],
-[ $four == $m2[1][3]->contestants->{Bye},	'@m2 Bye'],
+[ $m2[0]->isa('Games::Tournament::Card'),	'@m2 isa'],
+[ $m2[1]->isa('Games::Tournament::Card'),	'@m2 isa'],
+[ $m2[2]->isa('Games::Tournament::Card'),	'@m2 isa'],
+[ $m2[3]->isa('Games::Tournament::Card'),	'@m2 isa'],
+[ $seven == $m2[0]->contestants->{White},	'@m2 White0'],
+[ $one == $m2[0]->contestants->{Black},	'@m2 Black0'],
+[ $three == $m2[1]->contestants->{Black},	'@m2 Black1'],
+[ $two == $m2[1]->contestants->{White},	'@m2 White1'],
+[ $four == $m2[2]->contestants->{White},	'@m2 White2'],
+[ $five == $m2[2]->contestants->{Black},	'@m2 Black2'],
+[ $six == $m2[3]->contestants->{Bye},	'@m2 Bye'],
 );
 
-my @matches2;
-for my $bracket ( @m2 )
-{
-	for my $match ( @$bracket )
-	{
-		push @matches2, $match if
-				$match->isa('Games::Tournament::Card');
-	}
-}
-for my $match ( @matches2 )
+for my $match ( @m2 )
 {
 	$match->result({Black => 'Draw', White => 'Draw' })
 			unless $match->result;
 }
-$t->collectCards( @matches2 );
+$t->collectCards( @m2 );
 my @b3 = $t->formBrackets;
 my $p3 = $t->pairing( \@b3 );
 my %p3 = $p3->matchPlayers;
-my @m3 = @{ $p3{matches} };
+my @m3 = map { @$_ } @{ $p3{matches} };
 $t->round(3);
 
 push @tests, (
-[ $m3[0][0]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $m3[1][0]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $m3[1][1]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $m3[1][2]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $four == $m3[0][0]->contestants->{White},	'@m3 White0'],
-[ $seven == $m3[0][0]->contestants->{Black},	'@m3 Black0'],
-[ $three == $m3[1][0]->contestants->{Black},	'@m3 Black1'],
-[ $one == $m3[1][0]->contestants->{White},	'@m3 White1'],
-[ $six == $m3[1][1]->contestants->{White},	'@m3 White2'],
-[ $two == $m3[1][1]->contestants->{Black},	'@m3 Black2'],
-[ $five == $m3[1][2]->contestants->{Bye},	'@m3 Bye'],
+[ $m3[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $m3[1]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $m3[2]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $m3[3]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $six == $m3[0]->contestants->{White},	'@m3 White0'],
+[ $seven == $m3[0]->contestants->{Black},	'@m3 Black0'],
+[ $one == $m3[1]->contestants->{White},	'@m3 White1'],
+[ $two == $m3[1]->contestants->{Black},	'@m3 Black1'],
+[ $three == $m3[2]->contestants->{White},	'@m3 White2'],
+[ $four == $m3[2]->contestants->{Black},	'@m3 Black2'],
+[ $five == $m3[3]->contestants->{Bye},	'@m3 Bye'],
 );
 
 =begin comment text
 
-my @matches3 = map { @$_ } @m3;
-for my $match ( @matches3 )
-{
-	$match->result({Black => 'Draw', White => 'Draw' })
-			unless $match->result;
-}
-$t->collectCards( @matches3 );
-my @b4 = $t->formBrackets;
-my $p4 = $t->pairing( \@b4 );
-my %p4 = $p4->matchPlayers;
-my @m4 = @{ $p4{matches} };
-$t->round(4);
+TODO: {
+	for my $match ( @m3 )
+	{
+		$match->result({Black => 'Draw', White => 'Draw' })
+				unless $match->result;
+	}
+	$t->collectCards( @m3 );
+	my @b4 = $t->formBrackets;
+	my $p4 = $t->pairing( \@b4 );
+	my %p4 = $p4->matchPlayers;
+	my @m4 = map { @$_ } @{ $p4{matches} };
+	$t->round(4);
 
-push @tests, (
-[ $m4[0][0]->isa('Games::Tournament::Card'),	'@m4 isa'],
-[ $m4[1][0]->isa('Games::Tournament::Card'),	'@m4 isa'],
-[ $m4[1][1]->isa('Games::Tournament::Card'),	'@m4 isa'],
-[ $m4[1][2]->isa('Games::Tournament::Card'),	'@m4 isa'],
-[ $four == $m4[0][0]->contestants->{White},	'@m4 White0'],
-[ $seven == $m4[0][0]->contestants->{Black},	'@m4 Black0'],
-[ $three == $m4[1][0]->contestants->{Black},	'@m4 Black1'],
-[ $one == $m4[1][0]->contestants->{White},	'@m4 White1'],
-[ $six == $m4[1][1]->contestants->{White},	'@m4 White2'],
-[ $two == $m4[1][1]->contestants->{Black},	'@m4 Black2'],
-[ $five == $m4[1][2]->contestants->{Bye},	'@m4 Bye'],
-);
+	push @tests, (
+	[ $m4[0]->isa('Games::Tournament::Card'),	'@m4 isa'],
+	[ $m4[1]->isa('Games::Tournament::Card'),	'@m4 isa'],
+	[ $m4[2]->isa('Games::Tournament::Card'),	'@m4 isa'],
+	[ $m4[3]->isa('Games::Tournament::Card'),	'@m4 isa'],
+	[ $four == $m4[0]->contestants->{White},	'@m4 White0'],
+	[ $seven == $m4[0]->contestants->{Black},	'@m4 Black0'],
+	[ $three == $m4[1]->contestants->{Black},	'@m4 Black1'],
+	[ $one == $m4[1]->contestants->{White},	'@m4 White1'],
+	[ $six == $m4[2]->contestants->{White},	'@m4 White2'],
+	[ $two == $m4[2]->contestants->{Black},	'@m4 Black2'],
+	[ $five == $m4[3]->contestants->{Bye},	'@m4 Bye'],
+	);
+}
 
 =end comment text
 

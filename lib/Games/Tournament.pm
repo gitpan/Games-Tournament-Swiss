@@ -1,6 +1,6 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Apr 10, 12:31:05 PM
+# Last Edit: 2007 Sep 07, 09:33:10 AM
 # $Id: $
 
 use warnings;
@@ -51,6 +51,7 @@ sub new {
     return bless \%args, $self;
 }
 
+
 =head2 rank
 
  @rankings = $tourney->rank(@players)
@@ -76,8 +77,22 @@ sub rank {
               || $a->title cmp $b->title
               || $a->name cmp $b->name
         } @players;
-
     }
+}
+
+=head2 reverseRank
+
+ @reverseRankings = $tourney->reverseRank(@players)
+
+Ranks in reverse order a list of Games::Tournament::Contestant player objects by score, rating, title and name if they all have a score, otherwise reverseRanks them by rating, title and name.
+
+=cut
+
+sub reverseRank {
+    my $self    = shift;
+    my @players = @_;
+    my @rankers = $self->rank(@players);
+    return reverse @rankers;
 }
 
 

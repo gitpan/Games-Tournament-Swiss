@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Config;
 
-# Last Edit: 2007 Aug 20, 10:20:23 PM
+# Last Edit: 2007 Sep 14, 10:11:43 AM
 # $Id: $
 
 use warnings;
@@ -53,23 +53,26 @@ Die if the configuration contains anything but [A-Za-z0-9:,.]
 
 sub frisk {
     my $self    = shift;
-    my $suspect = shift;
-    unless ( ref $suspect ) {
-        die "We are afraid you may be importing nasty characters with $suspect.
-Please use only [A-Za-z0-9:.,] in your configuration files"
-          unless $suspect =~ m/^[A-Za-z0-9:.,]*$/;
-    }
-    elsif ( ref($suspect) eq "ARRAY" ) {
-        for (@$suspect) { $self->frisk($_); }
-    }
-    elsif ( ref($suspect) eq 'HASH' ) {
-        for ( keys %$suspect ) { $self->frisk( $suspect->{$_} ); }
-    }
-    else {
-        die "We are afraid you may be importing nasty objects with $suspect.
+    my @suspects = @_;
+    for my $suspect ( @suspects )
+    {
+	unless ( ref $suspect ) {
+	    die "We are afraid you may be importing nasty characters with
+$suspect. Please use only [A-Za-z0-9:.,] in your configuration files"
+	      unless $suspect =~ m/^[A-Za-z0-9:.,]*$/;
+	}
+	elsif ( ref($suspect) eq "ARRAY" ) {
+	    for (@$suspect) { $self->frisk($_); }
+	}
+	elsif ( ref($suspect) eq 'HASH' ) {
+	    for ( keys %$suspect ) { $self->frisk( $suspect->{$_} ); }
+	}
+	else {
+	    die "We are afraid you may be importing nasty objects with $suspect.
 Please use only arrays and hashes in your configuration files";
+	}
     }
-    return $suspect;
+    return;
 }
 
 

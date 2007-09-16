@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Aug 21, 11:47:39 AM
+# Last Edit: 2007 Sep 14, 10:44:07 PM
 # $Id: /swiss/trunk/script_files/pair 1285 2007-08-20T09:52:35.271041Z greg  $
 
 =head1 NAME
@@ -29,13 +29,13 @@ die 'round.yaml already exists' if -e 'round.yaml';
 my $roles = $league->{roles} || [qw/Black White/];
 my $scores = $league->{scores} ||
 	{ win => 1, loss => 0, draw => 0.5, absent => 0, bye => 1 };
-my $firstRound = $league->{firstround} || 1;
+my $firstround = $league->{firstround} || 1;
 my $algorithm = $league->{algorithm} || 'Games::Tournament::Swiss::Procedure::FIDE';
+my $abbrev = $league->{abbreviation} ||
+    { W => 'White', B => 'Black', 1 => 'Win', 0 => 'Loss',
+	0.5 => 'Draw', '=' => 'Draw'  };
 
-my $firstround = $swiss->frisk($firstRound);
-$scores = $swiss->frisk($scores);
-$roles = $swiss->frisk($roles);
-$algorithm = $swiss->frisk($algorithm);
+$swiss->frisk($scores, $roles, $firstround, $algorithm, $abbrev);
 
 $Games::Tournament::Swiss::Config::firstround = $firstround;
 %Games::Tournament::Swiss::Config::scores = %$scores;
@@ -51,12 +51,20 @@ my $table;
 my $players;
 my $games;
 
+## Make it possible to pass round number as an argument to this script.
+## If no argument is given then number of current round is computed 
+## by looking what's the last score file.
+
 my @rounds;
-for my $file ( glob ('./*') )
-{
-    push @rounds, $1 if -d $file and $file =~ m/\/(\d+)$/ and
-							    glob( "./$file/*" );
+if (($ARGV[0]) and ($ARGV[0] =~ /^\d+$/)) {
+    @rounds = (1..$ARGV[0]);
+} else {
+    for my $number ( glob ('./*') ) {
+	push @rounds, $1 if -d $number and $number =~ m/\/(\d+)$/ 
+	    and -e "./scores/$number.yaml";
+    }
 }
+
 my $timethrough;
 for my $round ( @rounds )
 {
@@ -152,7 +160,7 @@ __END__
 
 =head1 SYNOPSIS
 
-crosstable
+crosstable $n
 
 --help            This help message
 
@@ -161,6 +169,8 @@ crosstable
 =head1 DESCRIPTION
 
 B<crosstable> tallies the results of a tournament, recording the role, the opponent and the result for each player over each of the rounds.
+
+Run it in the directory league.yaml is in and pass a round number, it will show results up to that round. If no number is passed, results up to the highest existing round in the directory are shown. Run it in a round directory, it will show pairgroups for the round after that round.
 
 =cut
 
