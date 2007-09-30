@@ -1,6 +1,6 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Sep 07, 09:33:10 AM
+# Last Edit: 2007 Sep 30, 06:59:01 PM
 # $Id: $
 
 use warnings;
@@ -279,7 +279,6 @@ sub updateScores {
     my $round   = $self->round;
     my $games   = $self->play;
     my @scores;
-    my $roles = $self->roles;
     for my $player (@$players) {
         my $id     = $player->id;
         my $oldId  = $player->oldId;
@@ -290,7 +289,7 @@ sub updateScores {
           and $card->isa('Games::Tournament::Card');
         my $results = $card->{result};
         die @{ [ keys %$results ] } . " roles in player ${id}'s game?"
-          unless grep { $_ eq $roles->[0] or $_ eq $roles->[1] or $_ eq 'Bye' }
+          unless grep { $_ eq (ROLES)[0] or $_ eq (ROLES)[1] or $_ eq 'Bye' }
           keys %$results;
         eval { $card->myResult($player) };
         die "$@: Result in player ${id}'s $card game in round $round?"
@@ -343,23 +342,6 @@ sub randomRole {
     my $evenRole = int rand(2) ? (ROLES)[0] : (ROLES)[1];
     my $oddRole  = $evenRole eq (ROLES)[0] ? (ROLES)[1] : (ROLES)[0];
     return ( $evenRole, $oddRole );
-}
-
-
-=head2 scoreValues
-
-	$scores = scoreValues( {Win => 3, Loss => 2, Absent => 0, Draw => 1} )
-
-Gets/sets the possible scoreValues in the competition, eg Home and Away, or Black and White, as an anonymous hash.
-
-=cut
-
-sub scoreValues {
-    my $self   = shift;
-    my $scores = shift()
-      || $self->{scoreValues}
-      || { win => 1, loss => 0, draw => 0.5, absent => 0, bye => 1 };
-    use constant SCORES => %$scores;
 }
 
 

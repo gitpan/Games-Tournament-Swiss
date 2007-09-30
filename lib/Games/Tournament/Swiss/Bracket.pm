@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Sep 14, 03:24:55 PM
+# Last Edit: 2007 Sep 30, 07:52:36 AM
 # $Id: $
 
 use warnings;
@@ -54,8 +54,9 @@ members is a reference to a list of Games::Tournament::Contestant::Swiss objects
 sub new {
     my $self = shift;
     my %args = @_;
-    $args{criterion} = { B5 => 'Up&Down', B6 => 'Up&Down' };
+    # $args{criterion} = { B5 => 'Up&Down', B6 => 'Up&Down' };
     bless \%args, $self;
+    $args{floatCheck} = "None";
     return \%args;
 }
 
@@ -436,6 +437,35 @@ sub xprime {
 }
 
 
+=head2 floatCheckWaive
+
+ $tables = $group->floatCheckWaive
+
+There is an ordered sequence in which the checks of compliance with the Relative Criteria B5,6 restriction on recurring floats are relaxed in C9,10. The order is 1. downfloats for players downfloated 2 rounds before, 2. downfloats for players downfloated in the previous round (in C9), 3. upfloats for players floated up 2 rounds before, 4. upfloats for players floated up in the previous round (for players paired with opponents from a higher bracket in a heterogeneous bracket, in C10). Finally, although it is not explicitly stated, all float checks must be dropped and pairings considered again, before reducing the number of pairs made in the bracket. This method sets/gets the float check waive level at the moment. All criteria below that level should be checked for compliance. The possible values in order are 'None', 'B6Down', 'B5Down', 'B6Up', 'B5Up', 'All'. TODO Should there be some way of not requiring the caller to know how to use this method and what the levels are.
+
+=cut
+
+sub floatCheckWaive {
+    my $self   = shift;
+    my $level      = shift;
+    warn "Unknown float level: $level" if
+	$level and $level !~ m/^(?:None|B6Down|B5Down|B6Up|B5Up|All)$/i;
+    my $oldLevel = $self->{floatCheck};
+    if ( defined $level ) {
+	warn "Old float check level was $oldLevel, but new level is $level."
+	    unless $level eq 'None' or
+	    $oldLevel eq 'None' and $level eq 'B6Down' or
+	    $oldLevel eq 'B6Down' and $level eq 'B5Down' or
+	    $oldLevel eq 'B5Down' and $level eq 'B6Up' or 
+	    $oldLevel eq 'B6Up' and $level eq 'B5Up' or
+	    $oldLevel eq 'B5Up' and $level eq 'All';
+	$self->{floatCheck} = $level;
+    }
+    elsif ( defined $self->{floatCheck} ) { return $self->{floatCheck}; }
+    else { return; }
+}
+
+
 =head2 hetero
 
 	$group->hetero
@@ -577,45 +607,83 @@ Creates an iterator for the exchange of @s1 and @s2 players in D2 order, as used
 
 sub c8iterator {
     my $self      = shift;
-    my $n         = 0;
+    my $letter         = 'a';
     my $p         = $self->p;
-    my @exchanges = map {
-        my $i = $_;
-        map { [ [ $_, $_+$i ] ] }
-          reverse( ( max 1, $p-$i ) .. ( min $p-1, 2*($p-1)-$i ) )
-    } ( 1 .. 2*($p-1)-1 );
-    my @s1pair = map {
-        my $i = $_;
-        map { [ $i - $_, $i ] } 1 .. $i - 1
-    } reverse 2 .. $p - 1;
-    my @s2pair = map {
-        my $i = $_;
-        map { [ $i, $i + $_ ] } 1 .. 2 * ( $p - 1 ) - $i
-    } $p .. 2 * ( $p - 1 ) - 1;
-    my @exchanges2 = map {
-        my $i = $_;
-        map {
-            [
-                [ $s1pair[$_][0], $s2pair[ $i - $_ ][0] ],
-                [ $s1pair[$_][1], $s2pair[ $i - $_ ][1] ]
-            ]
-          } ( max 0, $i - ( $p - 1 ) * ( $p - 2 ) / 2 + 1 )
-          .. ( min( ( $p - 1 ) * ( $p - 2 ) / 2 - 1, $i ) )
-    } 0 .. ( $p - 1 ) * ( $p - 2 ) - 2;
+    my $oddBracket = @{$self->members} % 2;
+    my @exchanges;
+    unless ($oddBracket)
+    {
+	@exchanges = map {
+	    my $i = $_;
+	    map { [ [ $_, $_+$i ] ] }
+	      reverse( ( max 1, $p-$i ) .. ( min $p-1, 2*($p-1)-$i ) )
+	} ( 1 .. 2*($p-1)-1 );
+    }
+    elsif ( $oddBracket ) {
+	my $pPlus = $p+1;
+	@exchanges = map {
+	    my $i = $_;
+	    map { [ [ $_-1, $_+$i-1 ] ] }
+	      reverse( (max 1, $pPlus-$i) .. (min $pPlus-1, 2*($pPlus-1)-$i) )
+	} ( 1 .. 2*($pPlus-1)-1 );
+    }
+    my @exchanges2;
+    unless ($oddBracket)
+    {
+	my @s1pair = map {
+	    my $i = $_;
+	    map { [ $i - $_, $i ] } 1 .. $i - 1
+	} reverse 2 .. $p - 1;
+	my @s2pair = map {
+	    my $i = $_;
+	    map { [ $i, $i + $_ ] } 1 .. 2 * ( $p - 1 ) - $i
+	} $p .. 2 * ( $p - 1 ) - 1;
+	@exchanges2 = map {
+	    my $i = $_;
+	    map {
+		[
+		    [ $s1pair[$_][0], $s2pair[ $i - $_ ][0] ],
+		    [ $s1pair[$_][1], $s2pair[ $i - $_ ][1] ]
+		]
+	      } ( max 0, $i - ( $p - 1 ) * ( $p - 2 ) / 2 + 1 )
+	      .. ( min( ( $p - 1 ) * ( $p - 2 ) / 2 - 1, $i ) )
+	} 0 .. ( $p - 1 ) * ( $p - 2 ) - 2;
+    }
+    elsif ($oddBracket)
+    {
+	my $pPlus = $p+1;
+	my @s1pair = map {
+	    my $i = $_;
+	    map { [ $i - $_-1, $i-1 ] } 1 .. $i-1
+	} reverse 3 .. $pPlus - 1;
+	my @s2pair = map {
+	    my $i = $_;
+	    map { [ $i-1, $i+$_-1 ] } 1 .. 2 * ( $pPlus - 1 ) - $i
+	} $pPlus .. 2 * ( $pPlus - 1 ) - 1;
+	@exchanges2 = map {
+	    my $i = $_;
+	    map {
+		[
+		    [ $s1pair[$_][0], $s2pair[ $i - $_ ][0] ],
+		    [ $s1pair[$_][1], $s2pair[ $i - $_ ][1] ]
+		]
+	      } ( max 0, $i - ( $pPlus - 1 ) * ( $pPlus - 2 ) / 2 + 1 )
+	      .. ( min( ( $pPlus - 1 ) * ( $pPlus - 2 ) / 2 - 2, $i ) )
+	} 0 .. ( $pPlus - 1 ) * ( $pPlus - 2 ) - 3;
+    }
     push @exchanges, @exchanges2;
     return sub {
-        print "exchange " . ($n+1) . ":\t";
-        return () unless $exchanges[$n];
-	# my @members = @{ $self->members };
-	$self->resetS12;
-	my $s1 = $self->s1;
-	my $s2 = $self->s2;
-	my @members = (@$s1, @$s2);
+	my $exchange = shift @exchanges;
+        return ("last S1,S2 exchange") unless $exchange;
+    	$self->resetS12;
+    	my $s1 = $self->s1;
+    	my $s2 = $self->s2;
+    	my @members = (@$s1, @$s2);
+    	# my @members = @{ $self->members };
         ( $members[ $_->[0] ], $members[ $_->[1] ] ) =
           ( $members[ $_->[1] ], $members[ $_->[0] ] )
-          for @{ $exchanges[$n] };
-        $n++;
-        return @members;
+          for @$exchange;
+        return "exchange " . ($letter++), @members;
       }
 }
 

@@ -1,10 +1,11 @@
 package Games::Tournament::Card;
 
-# Last Edit: 2007 Sep 02, 09:45:50 PM
+# Last Edit: 2007 Sep 24, 07:08:05 PM
 # $Id: $
 
 use warnings;
 use strict;
+use Carp;
 
 use List::Util qw/min reduce sum/;
 
@@ -135,7 +136,7 @@ sub myResult {
     my %result;
     my %roles = map { $contestants->{$_}->id => $_ } keys %$contestants;
     my $role = $roles{ $contestant->id };
-    $result->{$role};
+    return $result->{$role};
 }
 
 
@@ -151,6 +152,7 @@ sub myPlayers {
     my $self        = shift;
     my $contestants = $self->contestants;
     my @players     = map { $contestants->{$_} } keys %$contestants;
+    return @players;
 }
 
 
@@ -165,9 +167,27 @@ Returns the role for $player from $game, eg 'White', 'Banker' or 'Away'.
 sub myRole {
     my $self       = shift;
     my $contestant = shift;
+    my $id = $contestant->id;
     my $contestants = $self->contestants;
-    my %roles       = map { $contestants->{$_}->id => $_ } keys %$contestants;
-    my $role        = $roles{ $contestant->id };
+    my @contestants = values %$contestants;
+    my %dupes;
+    for my $contestant ( @contestants )
+    {
+	die "Player $contestant isn't a contestant"
+	unless $contestant and
+		$contestant->isa('Games::Tournament::Contestant::Swiss');
+    }
+    my @dupes = grep { $dupes{$_->id}++ } @contestants;
+    croak "Players @dupes had more than one role" if @dupes;
+    my %roleReversal;
+    for my $role ( keys %$contestants )
+    {
+	my $id = $contestants->{$role}->id;
+	$roleReversal{$id} = $role;
+    }
+    my $role        = $roleReversal{ $id };
+    carp "No role for player $id in round " . $self->round unless $role;
+    return $role;
 }
 
 
@@ -184,6 +204,7 @@ sub myFloat {
     my $contestant = shift;
     # $self->canonize;
     my $float = $self->float($contestant);
+    return $float;
 }
 
 
@@ -244,10 +265,10 @@ Gets/sets whether the player was floated 'Up', 'Down', or 'Not' floated.
 sub float {
     my $self   = shift;
     my $player = shift;
-    die "Player is ref $player"
-      unless $player->isa('Games::Tournament::Contestant::Swiss');
+    die "Player is $player ref"
+      unless $player and $player->isa('Games::Tournament::Contestant::Swiss');
     my $role = $self->myRole($player);
-    die "$player is $role?"
+    croak $player->id . " has $role role in round $self->{round}?"
       unless $role eq 'Bye'
       or $role     eq (ROLES)[0]
       or $role     eq (ROLES)[1];

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Sep 14, 10:40:00 PM
-# $Id: /swiss/trunk/script_files/pair 1364 2007-09-14T15:30:19.454286Z greg  $
+# Last Edit: 2007 Sep 23, 06:49:01 AM
+# $Id: /swiss/trunk/script_files/pair 1399 2007-09-24T11:44:46.584916Z greg  $
 
 =head1 NAME
 
@@ -9,11 +9,11 @@ pair - Pair players for the next round of a swiss tournament
 
 =head1 VERSION
 
-0.07
+0.08
 
 =cut
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use strict;
 use warnings;
@@ -83,17 +83,32 @@ $tourney->initializePreferences;
 
 my @ids = map { $_->{pairingNumber} } @$lineup;
 my $pairingtable;
-if ( $round >= $firstround and -e "./pairtable.yaml" ) {
+if ( $round >= $firstround and -e "./pairtable.yaml" )
+{
     $pairingtable = LoadFile "./pairtable.yaml";
     my ( $opponents, $roles, $floats, $score ) = 
 	@$pairingtable{qw/opponents roles floats score/};
-	die "player missing items from pairtable."
-	    unless keys %$score == keys %$opponents;
-	    for my $player ( @$lineup )
-	    {
-		my $id = $player->id;
-		$player->score( $score->{$id} );
-	    }
+    my @keys = map { [ keys %$_ ] } $opponents, $roles, $floats, $score;
+    die "Player items missing from pairtable" if @{$keys[0]} != @{$keys[1]} or
+	    @{$keys[1]} != @{$keys[2]} or @{$keys[2]} != @{$keys[3]} or
+	    grep { $keys[0]->[$_] != $keys[1]->[$_] or
+		 $keys[1]->[$_] != $keys[2]->[$_] or
+		$keys[2]->[$_] != $keys[3]->[$_] } 0..$#{$keys[0]};
+    my %identityCheck;
+    @identityCheck{@{$keys[0]}} = (1) x @{$keys[0]};
+    for my $id ( @ids )
+    {
+	die "Player $id not in pairing table" unless $identityCheck{$id};
+	delete $identityCheck{$id};
+    }
+    my @remainingIds = keys %identityCheck;
+    die "Players @remainingIds in pairing table, but not in tournament lineup"
+	    if @remainingIds;
+    for my $player ( @$lineup )
+    {
+	my $id = $player->id;
+	$player->score( $score->{$id} );
+    }
     my $lastround = $round;
     for my $round ( 1..$lastround )
    {
@@ -102,22 +117,36 @@ if ( $round >= $firstround and -e "./pairtable.yaml" ) {
        {
 	   next if $games{$id};
 	   my $player = $tourney->ided($id);
-       my $opponentId = $opponents->{$id}->[$round-1];
-       my $opponent = $tourney->ided($opponentId);
-       die
-"Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent isn't $id"
-	   if $opponents->{$opponentId}->[$round-1] != $id;
-       my $role = $roles->{$id}->[$round-1];
-       my $opponentRole = $roles->{$opponentId}->[$round-1];
-        my $game = Games::Tournament::Card->new(
-	    round => $round,
-	    contestants => { $role => $player, $opponentRole => $opponent} );
+	   my $opponentId = $opponents->{$id}->[$round-1];
+	   my $opponent = $tourney->ided($opponentId);
+	   my $opponentsOpponent = $opponents->{$opponentId}->[$round-1];
+	   die
+"Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent is $opponentsOpponent, not $id in round $round"
+	       unless $opponentId eq 'Bye' or $opponentsOpponent == $id;
+	   my $role = $roles->{$id}->[$round-1];
+	   my $opponentRole = $roles->{$opponentId}->[$round-1];
+	   die
+"Player $id is $role, and opponent $opponentId is $opponentRole, in round $round?"
+		unless $player and $opponent and $role and $opponentRole;
+	   die
+"Player $id has same $role role as opponent $opponentId in round $round?" if 
+		$role eq $opponentRole;
+	   my $contestants;
+	   if ( $opponentId eq 'Bye' ) { $contestants = { Bye => $player } }
+	   else { $contestants = { $role=>$player, $opponentRole=>$opponent } }
+	   my $game = Games::Tournament::Card->new(
+			round => $round,
+			contestants =>  $contestants );
 	    if ($round >= $lastround-1)
 	    {
 		my $float = $floats->{$id}->[$round-$lastround-1];
-		my $opponentFloat = $floats->{$opponent}->[$round-$lastround-1];
 		$game->float($player, $float);
-		$game->float($opponent, $opponentFloat);
+		unless ($opponentId eq 'Bye')
+		{
+		    my $opponentFloat =
+				$floats->{$opponentId}->[$round-$lastround-1];
+		    $game->float($opponent, $opponentFloat);
+		}
 	    }
 	    $games{$id} = $game;
 	    $games{$opponentId} = $game;

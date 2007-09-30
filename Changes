@@ -1,4 +1,15 @@
 ---
+version: 0.09
+date: Sep 30, 2007
+revision: about 1431
+changes:
+  - refactor of C6 float testing
+  - D1,2 transposition, exchange tests
+  - pairing table consistency checks
+  - pairingtable parsing: bartolin #29485
+  - unit test of C10 code: bartolin #29495
+
+---
 version: 0.08
 date: Sep 16, 2007
 revision: about 1374

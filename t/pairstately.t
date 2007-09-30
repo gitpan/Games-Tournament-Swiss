@@ -9,6 +9,14 @@ use warnings;
 use Test::More;
 use YAML qw/Load LoadFile DumpFile/;
 
+use Config;
+my $secure_perl_path = $Config{perlpath};
+if ($^O ne 'VMS')
+{
+	$secure_perl_path .= $Config{_exe}
+		unless $secure_perl_path =~ m/$Config{_exe}$/i;
+}
+
 BEGIN {
     $Games::Tournament::Swiss::Config::firstround = 1;
     @Games::Tournament::Swiss::Config::roles      = qw/Black White/;
@@ -47,7 +55,7 @@ title: Unknown
 DumpFile './league.yaml', {member => \@members};
 mkdir '1';
 chdir '1';
-system 'perl ../script_files/pairstately';
+system "$secure_perl_path ../script_files/pairstately";
 
 my $round = LoadFile './round.yaml';
 my @tests = (
@@ -81,7 +89,7 @@ mkdir './scores';
 DumpFile './scores/1.yaml', $round1;
 mkdir '2';
 chdir '2';
-system 'perl ../script_files/pairstately';
+system "$secure_perl_path ../script_files/pairstately";
 
 $round = LoadFile './round.yaml';
 push @tests, (

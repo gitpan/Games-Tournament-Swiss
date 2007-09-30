@@ -13,6 +13,7 @@ my $builder = Module::Build->new(
 				'Test::More' => 0,
 				'YAML' => 0,
 				'IO::All' => 0,
+				'Parse::RecDescent' => 0,
 				},
     recommends => { YAML => 0, 'IO::All' => 0, 'Parse::RecDescent' => 0 },
     script_files	=> [qw(

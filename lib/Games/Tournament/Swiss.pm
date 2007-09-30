@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Sep 16, 09:38:51 AM
+# Last Edit: 2007 Sep 30, 07:04:07 PM
 # $Id: $
 
 use warnings;
@@ -21,7 +21,7 @@ use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Swiss::Procedure;
 use Games::Tournament::Contestant::Swiss::Preference;
 
-use List::Util qw/min reduce sum/;
+use List::Util qw/min reduce sum first/;
 
 =head1 NAME
 
@@ -29,11 +29,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.08
+Version 0.09
 
 =cut
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 =head1 SYNOPSIS
 
@@ -46,7 +46,6 @@ our $VERSION = '0.08';
     ...
 
     $tourney->collectCards(@games);
-    @scores = $tourney->updateScores($round);
     @groups = $tourney->formBrackets($round);
     $round5 = $tourney->pairing( \@groups );
     $matches = $round5->matchPlayers;
@@ -130,24 +129,19 @@ sub collectCards {
         my $id       = $entrant->id;
         my $oldroles = $entrant->roles;
         my $scores   = $entrant->scores;
-
-        # my $pref = $entrant->preference;
-        my @game = grep {
-            grep { $id == $_->{id} } $_->myPlayers
-        } @games;
-        my $game  = $game[0];
+        my $myGame = first { grep { $id == $_->{id} } $_->myPlayers } @games;
         my $round;
         my ( $role, $float );
-        if ( $game and $game->isa("Games::Tournament::Card") ) {
-	    # $game->canonize;
-	    $round = $game->round;
-            $role             = $game->myRole($entrant);
-            $float            = $game->myFloat($entrant);
-            $scores->{$round} = $game->{result}->{$role};
-            carp
-"No result in round $round for player $id, $entrant->{name} as $role"
-              unless $game->{result}->{$role};
-            $play->{$round}->{$id} = $game || "No game";
+        if ( $myGame and $myGame->isa("Games::Tournament::Card") ) {
+	    # $myGame->canonize;
+	    $round = $myGame->round;
+            $role             = $myGame->myRole($entrant);
+            $float            = $myGame->myFloat($entrant);
+            $scores->{$round} = $myGame->{result}->{$role};
+#            carp
+#"No result in round $round for player $id, $entrant->{name} as $role"
+#              unless $myGame->{result}->{$role};
+            $play->{$round}->{$id} = $myGame || "No game";
         }
         else { warn "Player $id had no game in round $round"; $role = 'None'; }
         $entrant->scores($scores);
@@ -158,14 +152,8 @@ sub collectCards {
         $entrant->floating('');
         $entrant->preference->update( $entrant->roles );
     }
-    #die "Players without game near round $self->{round}"
-    #    if grep {my $id = $_->id; not grep { $id eq $_->id } @clones }
-    #    							    @entrants;
-
     $self->entrants( \@entrants );
     $self->play($play);
-    # $self->updateScores;
-    # $self->entrants(\@entrants);
 }
 
 
@@ -348,7 +336,7 @@ sub whoPlayedWho {
                     $dupes->{$id}->{ $opponent->id } = $round;
                 }
             }
-            else { warn "Player ${id}'s game in round $round?"; }
+	    else { warn "Player ${id}'s game in round $round?"; }
         }
     }
     return $dupes;

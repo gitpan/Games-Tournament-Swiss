@@ -7,6 +7,7 @@ WriteMakefile
           'PREREQ_PM' => {
                            'IO::All' => '0',
                            'List::MoreUtils' => '0',
+                           'Parse::RecDescent' => '0',
                            'Test::More' => '0',
                            'YAML' => '0'
                          },

@@ -10,6 +10,14 @@ use Test::More;
 use YAML qw/LoadFile/;
 use IO::All;
 
+use Config;
+my $secure_perl_path = $Config{perlpath};
+if ($^O ne 'VMS')
+{
+	$secure_perl_path .= $Config{_exe}
+		unless $secure_perl_path =~ m/$Config{_exe}$/i;
+}
+
 my $table=<<EOT;
                  Round 5 Pairing Groups
  ---------------------------------------------------------------------
@@ -22,7 +30,7 @@ EOT
 
 $table > io('pairtable.txt');
 
-system('perl ./script_files/pairtable2yaml pairtable.txt');
+system("$secure_perl_path ./script_files/pairtable2yaml pairtable.txt");
 
 my $yaml = LoadFile './pairtable.yaml';
 

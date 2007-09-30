@@ -20,10 +20,13 @@ script_files/pairingtable
 script_files/pairtable2yaml
 script_files/crosstable
 t/00-load.t
+t/29495.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
 t/cc6619.t
+t/c7shuffler.t
+t/c8iterator.t
 t/four.t
 t/foura.t
 t/median.t

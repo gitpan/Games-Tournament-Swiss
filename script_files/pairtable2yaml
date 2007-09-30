@@ -20,6 +20,7 @@ use YAML qw/LoadFile DumpFile/;
 use IO::All;
 use Parse::RecDescent;
 our $RD_HINT=1;
+use List::MoreUtils qw/firstval/;
 
 my $io = io $ARGV[0];
 my @lines = $io->slurp;
@@ -29,7 +30,7 @@ my $table;
 
 for my $line ( @lines )
 {
-    our ($player, $opponents, $roles, $floats, $score, $result);
+    our ($player, $opponents, $roles, $b5float, $b6float, $score, $result);
     my $format = q{
 		    line: data end | longform end | comment end | <error>
 		    data: player opponents roles floats score
@@ -38,16 +39,35 @@ for my $line ( @lines )
 		    player: id { $::player = $item[1] }
 		    id: wholenumber
 		    wholenumber: m/^\d+/
+		    Bye: '-'
 		    opponents: opponent(s /,/) { $::opponents = $item[1] }
-		    opponent: id | '-'
+		    opponent: id | Bye
 		    roles: role(s) { $::roles = $item[1] }
-		    role: White | Black
+		    role: White | Black | Bye
 		    White: 'W'
 		    Black: 'B'
-		    floats: B6float(?) B5float(?)
-			{ push @$::floats, $item[1]->[0], $item[2]->[0] }
-		    B6float: 'u' | 'd'
-		    B5float: 'U' | 'D'
+		    floats: B6andB5 | B5andB6 | B5float | B6float | NotFloat
+		    B6andB5: B6float B5float 
+		    {
+			$::b5float ||= $item{'B5float'};
+			$::b6float ||= $item{'B6float'};
+		    }
+		    B5andB6: B5float B6float
+		    {
+			$::b5float ||= $item{'B5float'};
+			$::b6float ||= $item{'B6float'};
+		    }
+		    B6float: lowercasefloat
+		    {
+			$::b6float ||= $item{'lowercasefloat'};
+		    }
+		    lowercasefloat: 'u' | 'd'
+		    B5float: uppercasefloat
+		    {
+			$::b5float ||= $item{'uppercasefloat'};
+		    }
+		    uppercasefloat: 'U' | 'D'
+		    NotFloat: ''
 		    score: scorenumber { $::score = $item[1] }
 		    scorenumber: m/^\d+(?:\.5)?/
 		    comment: token(s?) {$::result = 'comment'}
@@ -59,22 +79,28 @@ for my $line ( @lines )
     defined $parser->line($line) or die "parser died: $?\n";
     unless ( $result and $result eq 'comment' )
     {
+	for ( @$opponents )
+	{
+	    $_ = 'Bye' if $_ and $_ eq '-';
+	}
 	$table->{opponents}->{$player} = $opponents;
 	for ( @$roles )
 	{
 	    $_ = 'White' if $_ and $_ eq 'W';
 	    $_ = 'Black' if $_ and $_ eq 'B';
-	}
-	for ( @$floats )
-{
-	    $_ = 'Up' if $_ and $_ =~ m/^U$/i;
-	    $_ = 'Down' if $_ and $_ =~ m/^D$/i;
+	    $_ = 'Bye' if $_ and $_ eq '-';
 	}
 	$table->{roles}->{$player} = $roles;
-	$table->{floats}->{$player} = $floats;
+	for ( $b5float,  $b6float )
+	{
+	    $_ = 'Up' if $_ and $_ =~ m/^U$/i;
+	    $_ = 'Down' if $_ and $_ =~ m/^D$/i;
+	    $_ = undef unless $_;
+	}
+	$table->{floats}->{$player} = [ $b6float, $b5float ];
 	$table->{score}->{$player} = $score;
     }
-    ($::player, $::opponents, $::roles, $::floats, $::score, $::result) = undef;
+    ($::player, $::opponents, $::roles, $::b5float, $::b6float, $::score, $::result) = undef;
 }
 
 DumpFile 'pairtable.yaml', $table;
