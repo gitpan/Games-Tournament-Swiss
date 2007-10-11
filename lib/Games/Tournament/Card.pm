@@ -1,6 +1,6 @@
 package Games::Tournament::Card;
 
-# Last Edit: 2007 Sep 24, 07:08:05 PM
+# Last Edit: 2007 Oct 06, 09:33:45 AM
 # $Id: $
 
 use warnings;
@@ -47,7 +47,7 @@ In a tournament, matches take place in rounds between contestants, who are maybe
 	    contestants => {Bye => $player},
 	    result => "Bye");
 
-'contestants' is a hash ref of player objects, keyed on Black and White, or Home and Away, or some other role distinction that needs to be balanced over the tournament. The players should be instances of the Games::Tournament::Contestant::Swiss class but perhaps some other class that overloads both string quoting with a 'name' method and arithmetical operations with an 'index' method will do. 'result' is a hash reference, keyed on the same keys as contestants, containing the results of the match. 'floats' is a hash of  which role was floated up and which down. The default is neither contestant was floated, and 'Down' for a Bye. A4. What are the fields in NoShow and byes? NoShow has no special form. Bye is { Bye => $player }. TODO Perhaps the fields should be Winner and Loser, and Down and Up?
+'contestants' is a hash ref of player objects, keyed on Black and White, or Home and Away, or some other role distinction that needs to be balanced over the tournament. The players are probably instances of the Games::Tournament::Contestant::Swiss class. 'result' is a hash reference, keyed on the same keys as contestants, containing the results of the match. 'floats' is a hash of  which role was floated up and which down. The default is neither contestant was floated, and 'Down' for a Bye. A4. What are the fields in NoShow and byes? NoShow has no special form. Bye is { Bye => $player }. TODO Perhaps the fields should be Winner and Loser, and Down and Up?
 
 =cut 
 

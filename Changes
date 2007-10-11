@@ -1,4 +1,15 @@
 ---
+version: 0.10
+date: Oct 11, 2007
+revision: about 1470
+changes:
+  - hashification of bracket, match orders, with a thisBracket index
+  - BYE procedure gets own state
+  - bad floating over-engineering checked
+  - transposition restart after C12,13 refloating
+  - test of c6pairs: bartolin #29682
+
+---
 version: 0.09
 date: Sep 30, 2007
 revision: about 1431

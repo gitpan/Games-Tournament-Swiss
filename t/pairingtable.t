@@ -21,7 +21,7 @@ if ($^O ne 'VMS')
 
 BEGIN {
     $Games::Tournament::Swiss::Config::firstround = 1;
-    @Games::Tournament::Swiss::Config::roles      = qw/Black White/;
+    @Games::Tournament::Swiss::Config::roles      = qw/White Black/;
     %Games::Tournament::Swiss::Config::scores      = (
     Win => 1, Draw => 0.5, Loss => 0, Absence => 0, Bye => 1 );
     $Games::Tournament::Swiss::Config::algorithm  =

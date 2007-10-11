@@ -1,5 +1,7 @@
 #!usr/bin/perl
 
+# White-winning, 4 players, all 3 rounds
+
 use lib qw/t lib/;
 
 use strict;
@@ -9,7 +11,7 @@ use YAML;
 
 BEGIN {
     $Games::Tournament::Swiss::Config::firstround = 1;
-    @Games::Tournament::Swiss::Config::roles      = qw/Black White/;
+    @Games::Tournament::Swiss::Config::roles      = qw/White Black/;
     %Games::Tournament::Swiss::Config::scores      = (
     Win => 1, Draw => 0.5, Loss => 0, Absence => 0, Bye => 1 );
     $Games::Tournament::Swiss::Config::algorithm  =
@@ -58,60 +60,60 @@ $t->assignPairingNumbers;
 $t->initializePreferences;
 $t->initializePreferences until $a->preference->role eq 'White';
 
-my @b = $t->formBrackets;
-my $pairing  = $t->pairing( \@b );
-my %p        = $pairing->matchPlayers;
-my @m = map { @$_ } @{ $p{matches} };
+my %b = $t->formBrackets;
+my $pairing  = $t->pairing( \%b );
+my $p        = $pairing->matchPlayers;
+my %m = map { $_ => $p->{matches}->{$_} } keys %{ $p->{matches} };
 $t->round(1);
 
 my @tests = (
-[ $m[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $a == $m[0]->contestants->{White},	'$m0 White'],
-[ $c == $m[0]->contestants->{Black},	'$m0 Black'],
-[ $b == $m[1]->contestants->{Black},	'$m1 Black'],
-[ $d == $m[1]->contestants->{White},	'$m1 White'],
+[ $m{0}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
+[ $m{0}->[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $a == $m{0}->[0]->contestants->{White},	'$m0 White'],
+[ $c == $m{0}->[0]->contestants->{Black},	'$m0 Black'],
+[ $b == $m{0}->[1]->contestants->{Black},	'$m1 Black'],
+[ $d == $m{0}->[1]->contestants->{White},	'$m1 White'],
 );
 
-$m[0]->result({Black => 'Loss', White => 'Win' });
-$m[1]->result({Black => 'Loss', White => 'Win' });
+$m{0}->[0]->result({Black => 'Loss', White => 'Win' });
+$m{0}->[1]->result({Black => 'Loss', White => 'Win' });
 
-$t->collectCards( @m );
-my @b2 = $t->formBrackets;
-my $p2  = $t->pairing( \@b2 );
-my %p2        = $p2->matchPlayers;
-my @m2 = map { @$_ } @{ $p2{matches} };
+$t->collectCards( map {@$_} values %m );
+my %b2 = $t->formBrackets;
+my $pair2  = $t->pairing( \%b2 );
+my $p2        = $pair2->matchPlayers;
+my %m2 = map { $_ => $p2->{matches}->{$_} } keys %{ $p2->{matches} };
 $t->round(2);
 
 push @tests, (
-[ $m2[0]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $m2[1]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $d == $m2[0]->contestants->{White},	'@m2 White0'],
-[ $a == $m2[0]->contestants->{Black},	'@m2 Black0'],
-[ $b == $m2[1]->contestants->{White},	'@m2 White1'],
-[ $c == $m2[1]->contestants->{Black},	'@m2 Black1'],
+[ $m2{1}->[0]->isa('Games::Tournament::Card'),	'@m2 isa'],
+[ $m2{0}->[0]->isa('Games::Tournament::Card'),	'@m2 isa'],
+[ $d == $m2{1}->[0]->contestants->{White},	'@m2 White1'],
+[ $a == $m2{1}->[0]->contestants->{Black},	'@m2 Black1'],
+[ $b == $m2{0}->[0]->contestants->{White},	'@m2 White0'],
+[ $c == $m2{0}->[0]->contestants->{Black},	'@m2 Black0'],
 );
 
-$m2[0]->result({Black => 'Loss', White => 'Win' });
-$m2[1]->result({Black => 'Loss', White => 'Win' });
+$m2{1}->[0]->result({Black => 'Loss', White => 'Win' });
+$m2{0}->[0]->result({Black => 'Loss', White => 'Win' });
 
-$t->collectCards( @m2 );
+$t->collectCards( map {@$_} values %m2 );
 
-my @b3 = $t->formBrackets;
-my $p3 = $t->pairing( \@b3 );
-my %p3 = $p3->matchPlayers;
-my @m3 = map { @$_ } @{ $p3{matches} };
+my %b3 = $t->formBrackets;
+my $pair3 = $t->pairing( \%b3 );
+my $p3 = $pair3->matchPlayers;
+my %m3 = map { $_ => $p3->{matches}->{$_} } keys %{ $p3->{matches} };
 $t->round(3);
 
 push @tests, (
-[ $m3[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $m3[1]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $c == $m3[0]->contestants->{White},	'@m3 White0'],
-[ $d == $m3[0]->contestants->{Black},	'@m3 Black0'],
-[ $a == $m3[1]->contestants->{White},	'@m3 White1'],
-[ $b == $m3[1]->contestants->{Black},	'@m3 Black1'],
+[ $m3{1}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $m3{0}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $a == $m3{1}->[0]->contestants->{White},	'@m3 White1'],
+[ $b == $m3{1}->[0]->contestants->{Black},	'@m3 Black1'],
+[ $c == $m3{0}->[0]->contestants->{White},	'@m3 White0'],
+[ $d == $m3{0}->[0]->contestants->{Black},	'@m3 Black0'],
 );
 
 plan tests => $#tests + 1;
 
-map { ok( $_->[0], $_->[ 1, ], ) } @tests;
+ok( $_->[0], $_->[ 1, ], ) for @tests;

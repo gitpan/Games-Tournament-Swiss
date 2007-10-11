@@ -21,6 +21,7 @@ script_files/pairtable2yaml
 script_files/crosstable
 t/00-load.t
 t/29495.t
+t/29682.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
@@ -33,7 +34,6 @@ t/median.t
 t/pair.t
 t/pairstately.t
 t/pairing.t
-t/pairing4.t
 t/pairingtable.t
 t/pairtable2yaml.t
 t/seven.t

@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Procedure;
 
-# Last Edit: 2007 Feb 22, 10:13:51 PM
+# Last Edit: 2007 Oct 06, 09:37:19 AM
 # $Id: $
 
 use warnings;
@@ -48,7 +48,6 @@ The module that you wrap needs a 'new' constructor and 'matchPlayers' and 'match
 
     $algorithm = Some::Arbitrary::Swiss::Algorithm->new(
         round       => $round,
-        index       => undef,
         brackets    => $brackets,
         incompatibles => $tourney->incompatibles,
         byes => $args{byes},

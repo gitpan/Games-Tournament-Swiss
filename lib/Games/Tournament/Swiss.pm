@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Sep 30, 07:04:07 PM
+# Last Edit: 2007 Oct 11, 12:22:28 PM
 # $Id: $
 
 use warnings;
@@ -29,11 +29,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.09
+Version 0.10
 
 =cut
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 =head1 SYNOPSIS
 
@@ -143,9 +143,9 @@ sub collectCards {
 #              unless $myGame->{result}->{$role};
             $play->{$round}->{$id} = $myGame || "No game";
         }
-        else { warn "Player $id had no game in round $round"; $role = 'None'; }
+        else { carp "Player $id had no game in round $round"; $role = 'None'; }
         $entrant->scores($scores);
-        die "No record in round $round for player $id $entrant->{name}"
+        croak "No record in round $round for player $id $entrant->{name}"
           unless $play->{$round}->{$id};
         $entrant->roles($role);
         $entrant->floats( $round, $float );
@@ -210,8 +210,7 @@ sub myCard {
 
  @groups = $tourney->formBrackets
 
-Returns for the next round an array of Games::Tournament::Swiss::Bracket objects grouping contestants with the same score, ordered by score. Late entrants without a score cause the program to die. Some groups may have odd numbers of players, etc, and players will have to be floated to other score groups.
-TODO Should this have a round parameter, requiring score info up to that round?
+Returns for the next round a hash of Games::Tournament::Swiss::Bracket objects grouping contestants with the same score, keyed on score. Late entrants without a score cause the program to die. Some groups may have odd numbers of players, etc, and players will have to be floated to other score groups. A number, from 1 to the total number of brackets, reflecting the order of pairing, is given to each bracket.
 
 =cut
 
@@ -219,16 +218,14 @@ sub formBrackets {
     my $self    = shift;
     my $players = $self->entrants;
     my %hashed;
-    my @groups;
+    my %brackets;
     foreach my $player (@$players) {
-        my @group = ();
         my $score = defined $player->score ? $player->score : 0;
-
         # die "$player has no score. Give them a zero, perhaps?"
         #   if $score eq "None";
         $hashed{$score}{ $player->pairingNumber } = $player;
     }
-    my $n = 0;
+    my $number = 1;
     foreach my $score ( reverse sort keys %hashed ) {
         my @members;
         foreach
@@ -239,13 +236,13 @@ sub formBrackets {
         use Games::Tournament::Swiss::Bracket;
         my $group = Games::Tournament::Swiss::Bracket->new(
             score   => $score,
-            members => \@members
+            members => \@members,
+	    number => $number
         );
-        push @groups, $group;
+        $brackets{$score} = $group;
+	$number++;
     }
-
-    # $self->brackets( \@groups );
-    return @groups;
+    return %brackets;
 }
 
 =head2 pairing
@@ -268,7 +265,6 @@ sub pairing {
         colorClashes => $self->colorClashes,
         byes         => $self->byesGone,
     );
-    # $self->{round} = $round+1;
 }
 
 

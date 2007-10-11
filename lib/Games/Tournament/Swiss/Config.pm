@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Config;
 
-# Last Edit: 2007 Sep 14, 10:11:43 AM
+# Last Edit: 2007 Oct 11, 09:20:09 AM
 # $Id: $
 
 use warnings;
@@ -78,7 +78,7 @@ Please use only arrays and hashes in your configuration files";
 
 =head2 roles
 
-Getter/setter of the roles the 2 players take, eg Black, White, or Home, Away. The default is Black, White.
+Getter/setter of the roles the 2 players take, eg Black, White, or Home, Away. The default is White, Black.
 
 =cut
 

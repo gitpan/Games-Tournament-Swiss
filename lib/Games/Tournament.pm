@@ -1,6 +1,6 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Sep 30, 06:59:01 PM
+# Last Edit: 2007 Oct 06, 09:34:43 AM
 # $Id: $
 
 use warnings;
@@ -38,10 +38,9 @@ In a tournament, there are contestants, and matches over rounds between the cont
 
 =head2 new
 
- Games::Tournament->new( roles => [qw/Black White/];
-	     rounds => 2, entrants => [ $a, $b, $c ] )
+ Games::Tournament->new( rounds => 2, entrants => [ $a, $b, $c ] )
 
-Creates a competition for entrants, over a number of rounds. entrants is a list of player objects. If the first round in which the module is used is not the first round of the competition itself, the actual round can be set in $Games::Tournament::firstround. If the 2 roles players take are not Black and White, then roles can be set in @Games::Tournament::roles. The objects should perhaps be instances of a class that overloads both string quoting with a 'name' method and arithmetical operations with an 'index' method. roles is an anonymous array.
+Creates a competition for entrants, over a number of rounds. entrants is a list of player objects.
 
 =cut 
 

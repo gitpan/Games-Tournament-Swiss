@@ -135,7 +135,7 @@ for my $round ( @rounds )
 	}
 }
 
-my @brackets = $tourney->formBrackets;
+my %brackets = $tourney->formBrackets;
 my $playerN = 0;
 
 print "
@@ -143,11 +143,11 @@ print "
 -------------------------------------------------------------------------
 Place  No  Opponents     Roles     Float Score
 ";
-for my $bracket ( @brackets )
+for my $index ( reverse sort keys %brackets )
 {
 	$playerN++;
 	my $place = $playerN;
-	my @members = @{$bracket->members};
+	my @members = @{$brackets{$index}->members};
 	$place .= '-' . ($playerN+$#members) if $#members;
 	$playerN += $#members;
 	print "$place\n";

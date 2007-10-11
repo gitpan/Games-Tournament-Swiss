@@ -1,10 +1,11 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Sep 30, 07:52:36 AM
+# Last Edit: 2007 Oct 11, 11:44:02 AM
 # $Id: $
 
 use warnings;
 use strict;
+use Carp;
 
 use constant ROLES => @Games::Tournament::Swiss::Config::roles;
 
@@ -12,6 +13,7 @@ use base qw/Games::Tournament::Swiss/;
 use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Card;
 use List::Util qw/max min reduce sum/;
+use List::MoreUtils qw/any/;
 
 =head1 NAME
 
@@ -47,14 +49,15 @@ The concept of immigration control is applied to impose order on the players flo
 
  $group = Games::Tournament::Swiss::Bracket->new( score => 7.5, members => [ $a, $b, $c ], remainderof => $largergroup )
 
-members is a reference to a list of Games::Tournament::Contestant::Swiss objects. The order is important. If the score group includes floaters, these members' scores will not be the same as $group->score. Such a heterogenous group is paired in two parts--first the downfloaters, and then the homogeneous remainder group. Remainder groups can be recognized by the existence of a 'remainderof' key that links them to the group they came from. Some members may also float down from a remainder group. A3
+members is a reference to a list of Games::Tournament::Contestant::Swiss objects. The order is important. If the score group includes floaters, these members' scores will not be the same as $group->score. Such a heterogenous group is paired in two parts--first the downfloaters, and then the homogeneous remainder group. Remainder groups can be recognized by the existence of a 'remainderof' key that links them to the group they came from. Some members may also float down from a remainder group. Each bracket needs a score to determine the right order they will be paired in. The number, from 1 to the total number of brackets, reflects that order. A3
 
 =cut 
 
 sub new {
     my $self = shift;
     my %args = @_;
-    # $args{criterion} = { B5 => 'Up&Down', B6 => 'Up&Down' };
+    my $score = $args{score};
+    die "Bracket has score of: $score?" unless defined $score;
     bless \%args, $self;
     $args{floatCheck} = "None";
     return \%args;
@@ -65,7 +68,7 @@ sub new {
 
  @floaters = $group->natives
 
-Returns those members who were in this bracket originally, as that was their birthright, their scores being all the same. One is a native of only one bracket, and you cannot change this status except by naturalization.
+Returns those members who were in this bracket originally, as that was their birthright, their scores being all the same. One is a native of only one bracket, and you cannot change this status except XXX EVEN by naturalization.
 
 =cut
 
@@ -82,11 +85,32 @@ sub natives {
 }
 
 
+=head2 citizens
+
+ @floaters = $group->citizens
+
+Returns those members who belong to this bracket. These members don't include those have just floated in, even though this floating status may be permanent. One is a native of only one bracket, and you cannot change this status except by naturalization.
+
+=cut
+
+sub citizens {
+    my $self = shift;
+    return () unless @{ $self->members };
+    my $members    = $self->members;
+    my $foreigners = $self->immigrants;
+    my @natives    = grep {
+        my $member = $_->{id};
+        not grep { $member == $_->{id} } @$foreigners
+    } @$members;
+    return \@natives;
+}
+
+
 =head2 naturalize
 
  $citizen = $group->naturalize($foreigner)
 
-Gives members who are resident, but not natives, ie immigrants, having been floated here from other brackets, the same status as natives, making them indistinguishable from them. This will fail if the player is not resident or not an immigrant. Returns the player with their new status.
+Gives members who are resident, but not citizens, ie immigrants, having been floated here from other brackets, the same status as natives, making them indistinguishable from them. This will fail if the player is not resident or not an immigrant. Returns the player with their new status.
 
 =cut
 
@@ -177,7 +201,7 @@ sub residents {
 	$bracket->emigrants($member)
 	$gone = $bracket->emigrants
 
-Sets whether this native member will not be included in pairing of this bracket. That is whether they have been floated to another bracket for pairing there. Gets all such members. A player may or may not be an emigrant. They can only stop being an emigrant if they move back to their native bracket. To do this, they have to return.
+Sets whether this citizen will not be included in pairing of this bracket. That is whether they have been floated to another bracket for pairing there. Gets all such members. A player may or may not be an emigrant. They can only stop being an emigrant if they move back to their native bracket. To do this, they have to return.
 
 =cut
 
@@ -193,21 +217,26 @@ sub emigrants {
 
 	$bracket->exit($player)
 
-Removes $player from the list of members if $player is an immigrant. If a native, adds them to the list of emigrants of this bracket. They are now in limbo. So make sure they enter another bracket.
+Removes $player from the list of members of the bracket. They are now in the air. So make sure they enter another bracket.
 
 =cut
 
 sub exit {
     my $self       = shift;
-    my $member     = shift;
     my $members    = $self->members;
-    my $immigrants = $self->immigrants;
-    if ( grep { $_ == $member } @$immigrants ) {
-        @{ $self->members } = grep { $_ != $member } @$members;
-    }
-    else {
-        $self->emigrants($member);
-    }
+    my $exiter     = shift;
+    my $myId = $exiter->id;
+    my @stayers = grep { $_->id != $myId } @$members;
+    my $number = $self->number;
+    die "Player $myId did not exit Bracket $number" if @stayers == @$members;
+    $self->members(\@stayers);
+    #my $immigrants = $self->immigrants;
+    #if ( grep { $_ == $member } @$immigrants ) {
+    #    @{ $self->members } = grep { $_ != $member } @$members;
+    #}
+    #else {
+    #    $self->emigrants($member);
+    #}
     return;
 }
 
@@ -223,21 +252,32 @@ Registers $foreigner as a resident, and removes $native from the list of emigran
 
 sub entry {
     my $self   = shift;
-    my $member = shift;
-    die
-"Player $member->{id} floating $member->{floater} from $self->{score}-score bracket?"
-      unless $member->floating
-      and $member->floating =~ m/Down|Up/;
-    my $members   = $self->members;
-    my $emigrants = $self->emigrants;
-    if ( grep { $_ == $member } @$emigrants ) {
-        $self->reentry($member);
-    }
-    else {
-        if ( $member->floating eq 'Down' ) { unshift @$members, $member; }
-        else { push @$members, $member; }
-        $self->members($members);
-    }
+    my $members = $self->members;
+    my $enterer = shift;
+    my $myId = $enterer->id;
+    my @residents = grep { $_->id != $myId } @$members;
+    my $number = $self->number;
+    die "Player $myId cannot enter Bracket $number. Is already there." unless
+	    @residents == @$members;
+    my @stayers = (@residents, $enterer);
+    croak "Player $myId did not enter Bracket $number" unless defined $enterer
+	    and $enterer->isa('Games::Tournament::Contestant') and
+	    @stayers == @residents + 1;
+    $self->members(\@stayers);
+    #die
+#"Pla#yer $member->{id} floating $member->{floater} from $self->{score}-score bracket?"
+    #  unless $member->floating
+    #  and $member->floating =~ m/Down|Up/;
+    #my $members   = $self->members;
+    #my $emigrants = $self->emigrants;
+    #if ( grep { $_->id == $member->id } @$emigrants ) {
+    #    $self->reentry($member);
+    #}
+    #else {
+    #    if ( $member->floating eq 'Down' ) { unshift @$members, $member; }
+    #    else { push @$members, $member; }
+    #    $self->members($members);
+    #}
     return;
 }
 
@@ -254,12 +294,41 @@ sub reentry {
     my $self      = shift;
     my $returnee  = shift;
     my $emigrants = $self->emigrants;
-    if ( grep { $_ == $returnee } @$emigrants ) {
-        my @nonreturnees = grep { $_ != $returnee } @$emigrants;
-        @{ $self->{gone} } = @nonreturnees;
+    if ( grep { $_->id == $returnee->id } @$emigrants ) {
+        my @nonreturnees = grep { $_->id != $returnee->id } @$emigrants;
+	# @{ $self->{gone} } = @nonreturnees;
+        $self->{gone} = \@nonreturnees;
         return @nonreturnees;
     }
+    #my @updatedlist = grep { $_->id != $returnee->id } @$emigrants;
+    #$self->emigrants($_) for @updatedlist;
+    #return @updatedlist if grep { $_->id == $returnee->id } @$emigrants;
     return;
+
+}
+
+
+=head2 annexed
+
+ $group->annexed(1)
+ $s1 = $group->s1($players)
+ $s1 = $group->s1
+
+Annex a bracket, so it is no longer independent, its affairs being controlled by the group:
+
+=cut
+
+sub annexed {
+    my $self = shift;
+    my $flag   = shift;
+    if ( defined $flag )
+    {
+	$self->{annexed} = $flag;
+	return $flag? 1: 0;
+    }
+    else {
+	return $self->{annexed}? 1: 0;
+    }
 }
 
 
@@ -701,6 +770,24 @@ sub score {
     my $score = shift;
     if ( defined $score ) { $self->{score} = $score; }
     elsif ( exists $self->{score} ) { return $self->{score}; }
+    return;
+}
+
+
+=head2 number
+
+	$group->number
+
+Gets/sets the bracket's number, a number from 1 to the number of brackets in the tournament. Don't use this number for anything important.
+
+=cut
+
+sub number {
+    my $self  = shift;
+    my $number = shift;
+    if ( defined $number ) { $self->{number} = $number; }
+    elsif ( exists $self->{number} ) { return $self->{number}; }
+    return;
 }
 
 
@@ -717,6 +804,7 @@ sub members {
     my $members = shift;
     if ( defined $members ) { $self->{members} = $members; }
     elsif ( $self->{members} ) { return $self->{members}; }
+    return;
 }
 
 
@@ -734,6 +822,108 @@ sub c8swapper {
     if ( defined $c8swapper ) { $self->{c8swapper} = $c8swapper; }
     elsif ( $self->{c8swapper} ) { return $self->{c8swapper}; }
 }
+
+
+=head2 _floatCheck
+
+        %b65TestResults = _floatCheck( \@passers, $checkLevels );
+
+Takes a list representing the pairing of a bracket (see the description for _getNonPaired), and the various up- and down-float check levels. Returns an anonymous hash keyed on 'badpos', the first element of the list responsible for violation of B6 or 5, and 'passers', an anonymous array of the same form as \@passers if there was no violation of any of the levels. A message noting the reason why the pairing is in violation of B6 or 5, and the id of the player involved is printed.
+
+=cut
+
+sub _floatCheck {
+    my $self = shift;
+    my $untested = shift;
+    my $levels = shift;
+    my $pprime = $self->pprime;
+    my $badpos;
+    my $testees = $untested;
+    my $levelpassers;
+    B56: for my $level (@$levels)
+    {
+	my ($round, $direction, $checkedOne, $id);
+	if ( $level =~ m/^B5/i ) { $round = 1; }
+	else { $round = 2; }
+	if( $level =~ m/Down$/i) { $direction = 'Down'; $checkedOne = 0 }
+	elsif ( $level =~ m/Up$/i ) { $direction = 'Up'; $checkedOne = 1 }
+	else { $levelpassers = $testees; last B56 }
+	POS: for my $pos ( 0 .. $#$testees ) {
+	    next unless defined $testees->[$pos];
+	    my @pair = ( $testees->[$pos]->[0], $testees->[$pos]->[1] );
+	    my @score = map { $_->score } @pair;
+	    my @float = map { $_->floats( -$round ) } @pair;
+	    my $test = 0;
+	    $test = ( $score[0] == $score[1] or $float[$checkedOne] ne
+		$direction ) unless $direction eq 'None';# XXX check both?  
+	    if ( $test ) { $levelpassers->[$pos] = \@pair; }
+	    else { $badpos = $pos; $id = $pair[$checkedOne]->id; last POS; }
+	}
+	unless ( (grep { defined $_ } @$levelpassers) >= $pprime )
+	{
+	    my $pluspos = $badpos+1;
+	    print
+"$level, table $pluspos: $id NOK. Floated $direction $round rounds ago\n";
+	    return badpos => $badpos, passers => undef;
+	}
+	my @nopairs = $self->_getNonPaired(@$levelpassers);
+	if (@nopairs and ( not $self->hetero or
+					(grep {defined} @nopairs)==1) )
+	{
+	    for my $pos ( 0 .. $#nopairs ) {
+		for my $player ( @{$nopairs[$pos]} ) {
+		    my $test = ( defined $player and ( $player->floats(-1)
+			and $player->floats(-1) eq "Down" or
+			$player->floats(-2) and $player->floats(-2) eq
+			"Down" ) );
+		    if ( $test ) {
+			my $downfloater = $player->id;
+			print
+	"B56: NOK. Unpaired $downfloater floated Down 1 or 2 rounds ago\n";
+			return badpos => $pos, passers => undef;
+		    }
+		}
+	    }
+	}
+    }
+    continue {
+	$testees = $levelpassers;
+	$levelpassers = undef;
+    }
+    return badpos => undef, passers => $levelpassers;
+}
+
+
+=head2 _getNonPaired
+
+	$bracket->_getNonPaired([$alekhine,$uwe],undef,[$deepblue,$yournewnike])
+
+Takes a list representing the pairing of S1 and S2. Each element of the list is either a 2-element anonymous array ref (an accepted pair of players), or undef (a rejected pair.) Returns an array of the same form, but with the accepted player items replaced by undef and the undef items replaced by the pairs rejected. If there are more players in S2 than S1, those players are represented as [undef,$player].
+
+=cut
+
+sub _getNonPaired {
+    my $self = shift;
+    my @pairables = @_;
+    my $s1 = $self->s1;
+    my $s2 = $self->s2;
+    my @nopairs;
+    for my $pos ( 0..$#pairables )
+    {
+	$nopairs[$pos] = [ $s1->[$pos], $s2->[$pos] ] unless
+					defined $pairables[$pos];
+    }
+    for my $pos ( $#pairables+1 .. $#$s1 )
+    {
+	$nopairs[$pos] = [ $s1->[$pos], $s2->[$pos] ];
+    }
+    for my $pos ( $#$s1+1 .. $#$s2 )
+    {
+	$nopairs[$pos] = [ undef, $s2->[$pos] ];
+    }
+    return @nopairs;
+}
+
 
 =head1 AUTHOR
 

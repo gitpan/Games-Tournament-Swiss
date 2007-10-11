@@ -261,46 +261,46 @@ for my $round ( 1..$lastround )
    $tourney->collectCards( @games );
 }
 
-my @b = $tourney->formBrackets;
-my $pairing  = $tourney->pairing( \@b );
-my %p        = $pairing->matchPlayers;
-my @m = map { @$_ } @{ $p{matches} };
+my %b = $tourney->formBrackets;
+my $pairing  = $tourney->pairing( \%b );
+my $p        = $pairing->matchPlayers;
+my %m = map { $_ => $p->{matches}->{$_} } keys %{ $p->{matches} };
 $tourney->round(5);
 
 my @tests = (
-[ $m[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $m[2]->isa('Games::Tournament::Card'),	'$m2 isa'],
-[ $m[3]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $m[4]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $m[5]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $m[6]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $m[7]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $m[8]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $m[9]->isa('Games::Tournament::Card'),	'$m3 isa'],
+[ $m{2.5}->[0]->isa('Games::Tournament::Card'),	'$m2.5 isa'],
+[ $m{2.5}->[1]->isa('Games::Tournament::Card'),	'$m2.5 isa'],
+[ $m{'2.5Remainder'}->[0]->isa('Games::Tournament::Card'),	'$m2.5R isa'],
+[ $m{'2.5Remainder'}->[1]->isa('Games::Tournament::Card'),	'$m2.5R isa'],
+[ $m{2}->[0]->isa('Games::Tournament::Card'),	'$m2 isa'],
+[ $m{'2Remainder'}->[0]->isa('Games::Tournament::Card'),	'$m2R isa'],
+[ $m{'2Remainder'}->[1]->isa('Games::Tournament::Card'),	'$m2R isa'],
+[ $m{1}->[0]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $m{1}->[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $m{0}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
 );
 
 push @tests,
-[ $lineup[7],	$m[0]->contestants->{Black},	'$m0 White'],
-[ $lineup[6],	$m[0]->contestants->{White},	'$m0 Black'],
-[ $lineup[1],	$m[1]->contestants->{Black},	'$m1 White'],
-[ $lineup[0],	$m[1]->contestants->{White},	'$m1 Black'],
-[ $lineup[3],	$m[2]->contestants->{Black},	'$m2 White'],
-[ $lineup[15],	$m[2]->contestants->{White},	'$m2 Black'],
-[ $lineup[8],	$m[3]->contestants->{Black},	'$m3 White'],
-[ $lineup[4],	$m[3]->contestants->{White},	'$m3 Black'],
-[ $lineup[2],	$m[4]->contestants->{Black},	'$m4 White'],
-[ $lineup[16],	$m[4]->contestants->{White},	'$m4 Black'],
-[ $lineup[5],	$m[5]->contestants->{Black},	'$m5 White'],
-[ $lineup[12],	$m[5]->contestants->{White},	'$m5 Black'],
-[ $lineup[10],	$m[6]->contestants->{Black},	'$m6 White'],
-[ $lineup[14],	$m[6]->contestants->{White},	'$m6 Black'],
-[ $lineup[9],	$m[7]->contestants->{Black},	'$m7 White'],
-[ $lineup[11],	$m[7]->contestants->{White},	'$m7 Black'],
-[ $lineup[17],	$m[8]->contestants->{Black},	'$m8 White'],
-[ $lineup[19],	$m[8]->contestants->{White},	'$m8 Black'],
-[ $lineup[13],	$m[9]->contestants->{Black},	'$m9 White'],
-[ $lineup[18],	$m[9]->contestants->{White},	'$m9 Black'],
+[ $lineup[7],	$m{2.5}->[0]->contestants->{Black},	'$m2.5 Black'],
+[ $lineup[6],	$m{2.5}->[0]->contestants->{White},	'$m2.5 White'],
+[ $lineup[1],	$m{2.5}->[1]->contestants->{Black},	'$m2.5 Black'],
+[ $lineup[0],	$m{2.5}->[1]->contestants->{White},	'$m2.5 White'],
+[ $lineup[3],	$m{'2.5Remainder'}->[0]->contestants->{Black},	'$m2.5R Black'],
+[ $lineup[15],	$m{'2.5Remainder'}->[0]->contestants->{White},	'$m2.5R White'],
+[ $lineup[8],	$m{'2.5Remainder'}->[1]->contestants->{Black},	'$m2.5R Black'],
+[ $lineup[4],	$m{'2.5Remainder'}->[1]->contestants->{White},	'$m2.5R White'],
+[ $lineup[2],	$m{2}->[0]->contestants->{Black},	'$m2 Black'],
+[ $lineup[16],	$m{2}->[0]->contestants->{White},	'$m2 White'],
+[ $lineup[5],	$m{'2Remainder'}->[0]->contestants->{Black},	'$m2R Black'],
+[ $lineup[12],	$m{'2Remainder'}->[0]->contestants->{White},	'$m2R White'],
+[ $lineup[10],	$m{'2Remainder'}->[1]->contestants->{Black},	'$m2R Black'],
+[ $lineup[14],	$m{'2Remainder'}->[1]->contestants->{White},	'$m2R White'],
+[ $lineup[9],	$m{1}->[0]->contestants->{Black},	'$m1 Black'],
+[ $lineup[11],	$m{1}->[0]->contestants->{White},	'$m1 White,was id 12!'],
+[ $lineup[17],	$m{1}->[1]->contestants->{Black},	'$m1 Black'],
+[ $lineup[19],	$m{1}->[1]->contestants->{White},	'$m1 White,was id 20!'],
+[ $lineup[13],	$m{0}->[0]->contestants->{Black},	'$m0 Black'],
+[ $lineup[18],	$m{0}->[0]->contestants->{White},	'$m0 White'],
 ;
 
 plan tests => $#tests + 1;

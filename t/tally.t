@@ -8,7 +8,7 @@ use Test::More;
 
 BEGIN {
     $Games::Tournament::Swiss::Config::firstround = 1;
-    @Games::Tournament::Swiss::Config::roles      = qw/Black White/;
+    @Games::Tournament::Swiss::Config::roles      = qw/White Black/;
     $Games::Tournament::Swiss::Config::algorithm  =
       'Games::Tournament::Swiss::Procedure::Dummy';
 }
