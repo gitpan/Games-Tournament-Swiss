@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Oct 11, 11:44:02 AM
+# Last Edit: 2007 Oct 13, 10:55:54 AM
 # $Id: $
 
 use warnings;
@@ -257,7 +257,7 @@ sub entry {
     my $myId = $enterer->id;
     my @residents = grep { $_->id != $myId } @$members;
     my $number = $self->number;
-    die "Player $myId cannot enter Bracket $number. Is already there." unless
+    croak "Player $myId cannot enter Bracket $number. Is already there." unless
 	    @residents == @$members;
     my @stayers = (@residents, $enterer);
     croak "Player $myId did not enter Bracket $number" unless defined $enterer
@@ -308,26 +308,26 @@ sub reentry {
 }
 
 
-=head2 annexed
+=head2 dissolved
 
- $group->annexed(1)
+ $group->dissolved(1)
  $s1 = $group->s1($players)
  $s1 = $group->s1
 
-Annex a bracket, so it is no longer independent, its affairs being controlled by the group:
+Dissolve a bracket, so it is no longer independent, its affairs being controlled by some other group:
 
 =cut
 
-sub annexed {
+sub dissolved {
     my $self = shift;
     my $flag   = shift;
     if ( defined $flag )
     {
-	$self->{annexed} = $flag;
+	$self->{dissolved} = $flag;
 	return $flag? 1: 0;
     }
     else {
-	return $self->{annexed}? 1: 0;
+	return $self->{dissolved}? 1: 0;
     }
 }
 
@@ -386,13 +386,22 @@ sub resetS12 {
     my $self    = shift;
     my $members = $self->residents;
     return [] unless $#$members >= 1;
-    my @downfloaters = $self->downFloaters;
     my (@s1, @s2);
     use Games::Tournament;
-    if ( @downfloaters and $self->hetero ) {
-        @s1 = @downfloaters;
-	my %downfloaters = map { $_->id => $_ } @downfloaters;
-	@s2 = grep { not exists $downfloaters{$_->id} } $self->rank(@$members);
+    if ( $self->hetero ) {
+	my %scorers;
+	my $number = $self->number;
+	for my $member (@$members)
+	{
+	    my $score = $member->score;
+	    push @{ $scorers{$score} }, $member;
+	}
+	my @scores = reverse sort keys %scorers;
+	#carp @scores . " different scores in Hetero Bracket $number"
+	#	if @scores > 2;
+        @s2 = @{$scorers{$scores[-1]}};
+	my %s2 = map { $_->id => $_ } @s2;
+	@s1 = grep { not exists $s2{$_->id} } $self->rank(@$members);
     }
     else {
         my $p       = $self->p;
@@ -409,23 +418,28 @@ sub resetS12 {
 
  $tables = $group->p
 
-Half the number of players in a homogeneous bracket, rounded down to the next lowest integer. Or the number of down floaters in a heterogeneous bracket. Also the number of players in S1, and thus the number of pairings in the pair group. (See A1,2)A6
+Half the number of players in a homogeneous bracket, rounded down to the next lowest integer. Or the number of down floaters in a heterogeneous bracket. Also the number of players in S1, and thus the number of pairings in the pair group. If there are more downfloaters than original members, half the number of players. (See A1,2)A6
 
 =cut
 
 sub p {
     my $self    = shift;
-    my $members = $self->residents;
-    return 0 unless $#$members >= 1;
-    my @downfloaters = $self->downFloaters;
+    my $members = $self->members;
+    my $n = @$members;
+    return 0 unless $n >= 2;
     my $p;
-    if ( @downfloaters and $self->hetero ) {
-        $p = @downfloaters;
+    if ( $self->hetero ) {
+	my %scorers;
+	%scorers = map { $_->score => ++$scorers{$_->score} } @$members;
+	my $lowestScore = min keys %scorers;
+    return unless defined $lowestScore;
+	$p = $n - $scorers{$lowestScore};
+        $p = int( $n / 2 ) if $p > $n/2;
     }
     else {
-        my $n = $#$members + 1;
         $p = int( $n / 2 );
     }
+    return $p;
 }
 
 
@@ -521,7 +535,8 @@ sub floatCheckWaive {
 	$level and $level !~ m/^(?:None|B6Down|B5Down|B6Up|B5Up|All)$/i;
     my $oldLevel = $self->{floatCheck};
     if ( defined $level ) {
-	warn "Old float check level was $oldLevel, but new level is $level."
+	warn 
+	"Old float check waive level was $oldLevel, but new level is $level."
 	    unless $level eq 'None' or
 	    $oldLevel eq 'None' and $level eq 'B6Down' or
 	    $oldLevel eq 'B6Down' and $level eq 'B5Down' or
@@ -551,6 +566,7 @@ sub hetero {
     my @range = keys %tally;
     return 0 if @range == 1;
     my $min = min @range;
+    return unless defined $min;
     return 0 if $tally{$min} <= @members/2;
     return 1 if $tally{$min} > @members/2;
     return;
@@ -787,6 +803,23 @@ sub number {
     my $number = shift;
     if ( defined $number ) { $self->{number} = $number; }
     elsif ( exists $self->{number} ) { return $self->{number}; }
+    return;
+}
+
+
+=head2 badpair
+
+	$group->badpair
+
+Gets/sets the badpair, the position, counting from zero, of the first pair in S1 and S2 for which pairing failed in a previous attempt in C6. This is the first position at which the next ordering of S2 will differ from the previous one. All orderings between these two orderings will not result in a criteria-compliant pairing.
+
+=cut
+
+sub badpair {
+    my $self    = shift;
+    my $badpair = shift;
+    if ( defined $badpair ) { $self->{badpair} = $badpair; }
+    elsif ( defined $self->{badpair} ) { return $self->{badpair}; }
     return;
 }
 

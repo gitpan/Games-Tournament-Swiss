@@ -60,18 +60,18 @@ system "$secure_perl_path ../script_files/pair";
 my $round = LoadFile './round.yaml';
 my @tests = (
 [ $round->{round} == 1, 'round 1'],
-[ ($round->{group}->{0}->{White} eq 'Your New Nicks' and
-  $round->{group}->{0}->{Black} eq 'Jose Capablanca' or
-  $round->{group}->{0}->{Black} eq 'Your New Nicks' and
-  $round->{group}->{0}->{White} eq 'Jose Capablanca'), '$m1 is Nicks&Jose'],
-[ ($round->{group}->{1}->{White} eq 'Alexander Alekhine' and
-  $round->{group}->{1}->{Black} eq 'LaLa Lakers' or
-  $round->{group}->{1}->{Black} eq 'Alexander Alekhine' and
-  $round->{group}->{1}->{White} eq 'LaLa Lakers'), '$m2 is LaLa&Alex'],
-[ ($round->{group}->{0}->{White} eq 'Your New Nicks' and
-  $round->{group}->{1}->{Black} eq 'LaLa Lakers' or
-  $round->{group}->{0}->{Black} eq 'Your New Nicks' and
-  $round->{group}->{1}->{White} eq 'LaLa Lakers'), 'S1 players different roles']
+[ ($round->{group}->{1}->{White} eq 'Your New Nicks' and
+  $round->{group}->{1}->{Black} eq 'Jose Capablanca' or
+  $round->{group}->{1}->{Black} eq 'Your New Nicks' and
+  $round->{group}->{1}->{White} eq 'Jose Capablanca'), '$m1 is Nicks&Jose'],
+[ ($round->{group}->{2}->{White} eq 'Alexander Alekhine' and
+  $round->{group}->{2}->{Black} eq 'LaLa Lakers' or
+  $round->{group}->{2}->{Black} eq 'Alexander Alekhine' and
+  $round->{group}->{2}->{White} eq 'LaLa Lakers'), '$m2 is LaLa&Alex'],
+[ ($round->{group}->{1}->{White} eq 'Your New Nicks' and
+  $round->{group}->{2}->{Black} eq 'LaLa Lakers' or
+  $round->{group}->{1}->{Black} eq 'Your New Nicks' and
+  $round->{group}->{2}->{White} eq 'LaLa Lakers'), 'S1 players different roles']
 );
 
 my @files = glob './*';

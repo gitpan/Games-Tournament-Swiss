@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Oct 07, 09:28:49 PM
-# $Id: /swiss/trunk/script_files/pair 1465 2007-10-11T04:42:51.920497Z greg  $
+# Last Edit: 2007 Oct 13, 09:39:25 AM
+# $Id: /swiss/trunk/script_files/pair 1472 2007-10-13T02:03:22.823448Z greg  $
 
 =head1 NAME
 
@@ -157,10 +157,14 @@ if ( $round >= $firstround and -e "./pairtable.yaml" )
 my %brackets = $tourney->formBrackets;
 my $pairing = $tourney->pairing( \%brackets );
 my $results = $pairing->matchPlayers;
+my $matches = $results->{matches};
 my @games;
-for my $bracket ( values %{$results->{matches}} )
+
+for my $bracket ( reverse sort keys %$matches )
 {
-    push @games, grep { $_ if ref eq 'Games::Tournament::Card' } @$bracket;
+    my $bracketmatches = $matches->{$bracket};
+    push @games, grep { $_ if ref eq 'Games::Tournament::Card' }
+	@$bracketmatches;
 }
 $tourney->round($next);
 $tourney->publishCards(@games);
@@ -173,7 +177,7 @@ if ( -e '../assistants.yaml' ) {
     my $assistantFile = LoadFile '../assistants.yaml';
     $schedule->{assistant} = $assistantFile->{$next};
 }
-$n = 0;
+$n = 1;
 for my $game (@games) {
     my %group = map { $_ => $game->{contestants}->{$_}->{name} }
       keys %{ $game->{contestants} };

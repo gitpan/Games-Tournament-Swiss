@@ -1,6 +1,6 @@
 package Games::Tournament::Card;
 
-# Last Edit: 2007 Oct 06, 09:33:45 AM
+# Last Edit: 2007 Oct 12, 02:35:16 PM
 # $Id: $
 
 use warnings;
@@ -151,7 +151,7 @@ Returns an array of the players from $game, eg ($alekhine, $yourNewNicks).
 sub myPlayers {
     my $self        = shift;
     my $contestants = $self->contestants;
-    my @players     = map { $contestants->{$_} } keys %$contestants;
+    my @players     = values %$contestants;
     return @players;
 }
 

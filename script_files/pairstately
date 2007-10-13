@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Oct 07, 07:38:51 PM
-# $Id: /swiss/trunk/script_files/pairstately 1465 2007-10-11T04:42:51.920497Z greg  $
+# Last Edit: 2007 Oct 13, 09:40:34 AM
+# $Id: /swiss/trunk/script_files/pairstately 1472 2007-10-13T02:03:22.823448Z greg  $
 
 use strict;
 use warnings;
@@ -157,10 +157,14 @@ if ( -e "../$previous/matches.yaml" and $round >= $firstround ) {
 my %brackets = $tourney->formBrackets;
 my $pairing = $tourney->pairing( \%brackets );
 my $paired = $pairing->matchPlayers;
+my $matches = $paired->{matches};
 my @games;
-for my $bracket ( values %{$paired->{matches}} )
+
+for my $bracket ( reverse sort keys %$matches )
 {
-    push @games, grep { $_ if ref eq 'Games::Tournament::Card' } @$bracket;
+    my $bracketmatches = $matches->{$bracket};
+    push @games, grep { $_ if ref eq 'Games::Tournament::Card' }
+	@$bracketmatches;
 }
 $tourney->round($next);
 $tourney->publishCards(@games);
@@ -173,7 +177,7 @@ if ( -e '../assistants.yaml' ) {
     my $assistantFile = LoadFile '../assistants.yaml';
     $schedule->{assistant} = $assistantFile->{$next};
 }
-$n = 0;
+$n = 1;
 for my $game (@games) {
     my %group = map { $_ => $game->{contestants}->{$_}->{name} }
       keys %{ $game->{contestants} };

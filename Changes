@@ -1,4 +1,13 @@
 ---
+version: 0.11
+date: Oct 13, 2007
+revision: about 1480
+changes:
+  - rewrite of C10 code
+  - new indexing method
+  - table ordering in round.yaml bartolin #29953
+
+---
 version: 0.10
 date: Oct 11, 2007
 revision: about 1470
