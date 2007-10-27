@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Oct 27, 05:22:34 PM
+# Last Edit: 2007 Oct 27, 07:23:49 PM
 # $Id: $
 
 use warnings;
@@ -229,12 +229,6 @@ sub unbyable {
     else { return; }
 }
 
-
-sub unbyable {
-    my $self  = shift;
-    ret
-
-}
 
 =head1 AUTHOR
 
