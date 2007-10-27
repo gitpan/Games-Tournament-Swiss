@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Oct 27, 11:30:16 AM
+# Last Edit: 2007 Oct 27, 05:22:34 PM
 # $Id: $
 
 use warnings;
@@ -221,12 +221,20 @@ A flag of convenience telling you whether to let this player have the bye. Am I 
 
 =cut
 
-use orz;
+sub unbyable {
+    my $self = shift;
+    my $unbyable = shift;
+    if ( $unbyable ) { $self->{unbyable} = 1; return }
+    elsif ( defined $self->{unbyable} ) { return $self->{unbyable}; }
+    else { return; }
+}
+
+
 sub unbyable {
     my $self  = shift;
+    ret
 
 }
-no orz;
 
 =head1 AUTHOR
 
