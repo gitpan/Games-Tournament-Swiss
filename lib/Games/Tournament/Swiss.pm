@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Oct 13, 11:41:17 AM
+# Last Edit: 2007 Oct 27, 11:30:53 AM
 # $Id: $
 
 use warnings;
@@ -22,6 +22,7 @@ use Games::Tournament::Swiss::Procedure;
 use Games::Tournament::Contestant::Swiss::Preference;
 
 use List::Util qw/min reduce sum first/;
+use List::MoreUtils qw/all/;
 
 =head1 NAME
 
@@ -29,11 +30,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.11
+Version 0.12
 
 =cut
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 =head1 SYNOPSIS
 
@@ -108,6 +109,77 @@ sub initializePreferences {
         $players[ 2 * $n + 1 ]->preference->difference(0);
     }
     $self->entrants( \@players );
+}
+
+
+=head2 prepareCards
+
+ $tourney->prepareCards( {
+     round => $round,
+     opponents => { 1 => 2, 2 => 1},
+     roles => { 1 => 'W', 2 => 'B' },
+     floats => { 1 => 'U', 2=> 'D' }
+ } )
+
+From hashes of the opponents, roles and floats for each player in a round, draws up game cards for each of the matches of the round. NOTE: It's all wrapped up in a big anonymous hash. Returned is a list of Games::Tournament::Card objects, with undefined result fields.
+
+=cut
+
+sub prepareCards {
+    my $self  = shift;
+    my $args    = shift;
+    my $round = $args->{round};
+    my $opponents = $args->{opponents};
+    my $roles = $args->{roles};
+    my $floats = $args->{floats};
+    my $players = $self->entrants;
+    my @ids = map { $_->id } @$players;
+    my $test = sub {
+	my %count = ();
+	$count{$_}++ for @ids, keys %$opponents, keys %$roles, keys %$floats;
+	return all { $count{$_} == 4 } keys %count;
+	    };
+    croak "Players in games different than those in lineup" unless &$test;
+    my (%games, @games);
+    for my $id ( @ids )
+    {
+       next if $games{$id};
+       my $player = $self->ided($id);
+       my $opponentId = $opponents->{$id};
+       croak "No opponent for Player $id in round $round" unless $opponentId;
+       my $opponent = $self->ided($opponentId);
+       my $opponentsOpponent = $opponents->{$opponentId};
+       croak
+    "Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent is $opponentsOpponent, not $id in round $round"
+	   unless $opponentId eq 'Bye' or $opponentsOpponent == $id;
+       my $role = $roles->{$id};
+       my $opponentRole = $roles->{$opponentId};
+       croak
+"Player $id is $role, and opponent $opponentId is $opponentRole, in round $round?"
+	    unless $player and $opponent and $role and $opponentRole;
+       croak
+"Player $id has same $role role as opponent $opponentId in round $round?" if 
+	    $role eq $opponentRole;
+       my $contestants;
+       if ( $opponentId eq 'Bye' ) { $contestants = { Bye => $player } }
+       else { $contestants = { $role=>$player, $opponentRole=>$opponent } }
+	my $game = Games::Tournament::Card->new(
+		    round => $round,
+		    contestants =>  $contestants,
+		    result => undef );
+	my $float = $floats->{$id};
+	$game->float($player, $float);
+	unless ($opponentId eq 'Bye')
+	{
+	    my $opponentFloat =
+			$floats->{$opponentId};
+	    $game->float($opponent, $opponentFloat);
+	}
+	$games{$id} = $game;
+	$games{$opponentId} = $game;
+	push @games, $game;
+    }
+    return @games;
 }
 
 

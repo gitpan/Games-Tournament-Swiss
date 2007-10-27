@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Sep 30, 07:31:20 AM
+# Last Edit: 2007 Oct 27, 11:30:16 AM
 # $Id: $
 
 use warnings;
@@ -16,11 +16,11 @@ Games::Tournament::Contestant::Swiss  A competitor in a FIDE-Swiss-Rules event
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -173,7 +173,7 @@ sub floats {
 	return;
     }
     elsif ( defined $round ) {
-	if (not exists $self->{floats}->[$round] and $round==-1 or $round==-2)
+	if (not exists $self->{floats}->[$round] and ($round==-1 or $round==-2))
 	{return 'Not'}
 	else { return $self->{floats}->[$round]; }
     }
@@ -211,6 +211,22 @@ sub importPairtableRecord {
     $self->{score} = $record->{score};
     return;
 }
+
+=head2 unbyable
+
+    $member->unbyable(1)
+    return BYE unless $member->unbyable
+
+A flag of convenience telling you whether to let this player have the bye. Am I doing the right thing here? This will be gettable and settable, but will it be reliable?
+
+=cut
+
+use orz;
+sub unbyable {
+    my $self  = shift;
+
+}
+no orz;
 
 =head1 AUTHOR
 

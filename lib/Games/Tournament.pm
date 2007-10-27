@@ -1,6 +1,6 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Oct 06, 09:34:43 AM
+# Last Edit: 2007 Oct 27, 11:29:23 AM
 # $Id: $
 
 use warnings;
@@ -16,11 +16,11 @@ Games::Tournament - Contestant Pairing
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 

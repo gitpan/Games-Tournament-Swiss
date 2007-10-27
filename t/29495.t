@@ -2,6 +2,12 @@
 
 # http://rt.cpan.org/Ticket/Display.html?id=29495
 # workout for C10
+# similar, but not the same (?), as 5th round of 
+# http://www.lsvmv.de/turniere/erg/eon_2007a_paar.htm
+# in 29682_2.t
+# http://chesschat.org/showpost.php?p=172088&postcount=42
+# http://chesschat.org/showpost.php?p=172097&postcount=44
+# http://chesschat.org/showpost.php?p=172124&postcount=45
 
 use lib qw/t lib/;
 
@@ -267,45 +273,47 @@ my $p        = $pairing->matchPlayers;
 my %m = map { $_ => $p->{matches}->{$_} } keys %{ $p->{matches} };
 $tourney->round(5);
 
+# Round 5:  8 (3.5), 1 (3), 2 4 5 7 9 16 17 (2.5), 3 6 11 13 15 (2), 10 20 (1.5), 12 18 19 (1), 14 (0),
+
 my @tests = (
 [ $m{2.5}->[0]->isa('Games::Tournament::Card'),	'$m2.5 isa'],
 [ $m{2.5}->[1]->isa('Games::Tournament::Card'),	'$m2.5 isa'],
 [ $m{'2.5Remainder'}->[0]->isa('Games::Tournament::Card'),	'$m2.5R isa'],
 [ $m{'2.5Remainder'}->[1]->isa('Games::Tournament::Card'),	'$m2.5R isa'],
-[ $m{2}->[0]->isa('Games::Tournament::Card'),	'$m2 isa'],
-[ $m{'2Remainder'}->[0]->isa('Games::Tournament::Card'),	'$m2R isa'],
-[ $m{'2Remainder'}->[1]->isa('Games::Tournament::Card'),	'$m2R isa'],
+[ $m{'2C11Repair'}->[0]->isa('Games::Tournament::Card'),	'$m2C11 isa'],
+[ $m{'2C11RepairRemainder'}->[0]->isa('Games::Tournament::Card'),	'$m2R isa'],
+[ $m{'2C11RepairRemainder'}->[1]->isa('Games::Tournament::Card'),	'$m2R isa'],
 [ $m{1}->[0]->isa('Games::Tournament::Card'),	'$m1 isa'],
 [ $m{1}->[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
 [ $m{0}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
 );
 
 push @tests,
-[ $lineup[7],	$m{2.5}->[0]->contestants->{Black},	'$m2.5 Black'],
 [ $lineup[6],	$m{2.5}->[0]->contestants->{White},	'$m2.5 White'],
-[ $lineup[1],	$m{2.5}->[1]->contestants->{Black},	'$m2.5 Black'],
+[ $lineup[7],	$m{2.5}->[0]->contestants->{Black},	'$m2.5 Black'],
 [ $lineup[0],	$m{2.5}->[1]->contestants->{White},	'$m2.5 White'],
+[ $lineup[1],	$m{2.5}->[1]->contestants->{Black},	'$m2.5 Black'],
+[ $lineup[4],	$m{'2.5Remainder'}->[0]->contestants->{White},	'$m2.5R White'],
 [ $lineup[3],	$m{'2.5Remainder'}->[0]->contestants->{Black},	'$m2.5R Black'],
-[ $lineup[15],	$m{'2.5Remainder'}->[0]->contestants->{White},	'$m2.5R White'],
+[ $lineup[16],	$m{'2.5Remainder'}->[1]->contestants->{White},	'$m2.5R White'],
 [ $lineup[8],	$m{'2.5Remainder'}->[1]->contestants->{Black},	'$m2.5R Black'],
-[ $lineup[4],	$m{'2.5Remainder'}->[1]->contestants->{White},	'$m2.5R White'],
-[ $lineup[2],	$m{2}->[0]->contestants->{Black},	'$m2 Black'],
-[ $lineup[16],	$m{2}->[0]->contestants->{White},	'$m2 White'],
-[ $lineup[5],	$m{'2Remainder'}->[0]->contestants->{Black},	'$m2R Black'],
-[ $lineup[12],	$m{'2Remainder'}->[0]->contestants->{White},	'$m2R White'],
-[ $lineup[10],	$m{'2Remainder'}->[1]->contestants->{Black},	'$m2R Black'],
-[ $lineup[14],	$m{'2Remainder'}->[1]->contestants->{White},	'$m2R White'],
-[ $lineup[9],	$m{1}->[0]->contestants->{Black},	'$m1 Black'],
-[ $lineup[11],	$m{1}->[0]->contestants->{White},	'$m1 White,was id 12!'],
-[ $lineup[17],	$m{1}->[1]->contestants->{Black},	'$m1 Black'],
-[ $lineup[19],	$m{1}->[1]->contestants->{White},	'$m1 White,was id 20!'],
+[ $lineup[15],	$m{'2C11Repair'}->[0]->contestants->{White},	'$m2 White'],
+[ $lineup[12],	$m{'2C11Repair'}->[0]->contestants->{Black},	'$m2 Black'],
+[ $lineup[2],	$m{'2C11RepairRemainder'}->[0]->contestants->{White},	'$m2R White'],
+[ $lineup[14],	$m{'2C11RepairRemainder'}->[0]->contestants->{Black},	'$m2R Black'],
+[ $lineup[10],	$m{'2C11RepairRemainder'}->[1]->contestants->{White},	'$m2R White'],
+[ $lineup[5],	$m{'2C11RepairRemainder'}->[1]->contestants->{Black},	'$m2R Black'],
+[ $lineup[9],	$m{1}->[0]->contestants->{White},	'$m1 White,was id 12!'],
+[ $lineup[17],	$m{1}->[0]->contestants->{Black},	'$m1 Black'],
+[ $lineup[18],	$m{1}->[1]->contestants->{White},	'$m1 White,was id 20!'],
+[ $lineup[19],	$m{1}->[1]->contestants->{Black},	'$m1 Black'],
+[ $lineup[11],	$m{0}->[0]->contestants->{White},	'$m0 White'],
 [ $lineup[13],	$m{0}->[0]->contestants->{Black},	'$m0 Black'],
-[ $lineup[18],	$m{0}->[0]->contestants->{White},	'$m0 White'],
 ;
 
 plan tests => $#tests + 1;
 
 ok( $_->[0], $_->[ 1, ], ) for @tests[0..9];
-is_deeply( $_->[0], $_->[ 1, ], $_->[ 2, ], ) for @tests[10..$#tests];
+is( $_->[0], $_->[ 1, ], $_->[ 2, ], ) for @tests[10..$#tests];
 
 # vim: set ts=8 sts=4 sw=4 noet:

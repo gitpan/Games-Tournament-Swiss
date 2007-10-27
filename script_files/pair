@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Oct 13, 09:39:25 AM
-# $Id: /swiss/trunk/script_files/pair 1472 2007-10-13T02:03:22.823448Z greg  $
+# Last Edit: 2007 Oct 27, 11:35:25 AM
+# $Id: /swiss/trunk/script_files/pair 1532 2007-10-27T03:38:38.615327Z greg  $
 
 =head1 NAME
 
@@ -9,16 +9,16 @@ pair - Pair players for the next round of a swiss tournament
 
 =head1 VERSION
 
-0.08
+Version 0.09
 
 =cut
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use strict;
 use warnings;
 
-use YAML qw/LoadFile DumpFile/;
+use YAML qw/LoadFile DumpFile Bless/;
 
 use Games::Tournament::Swiss::Config;
 
@@ -83,73 +83,24 @@ my @ids = map { $_->{pairingNumber} } @$lineup;
 my $pairingtable;
 if ( $round >= $firstround and -e "./pairtable.yaml" )
 {
-    $pairingtable = LoadFile "./pairtable.yaml";
-    my ( $opponents, $roles, $floats, $score ) = 
-	@$pairingtable{qw/opponents roles floats score/};
-    my @keys = map { [ keys %$_ ] } $opponents, $roles, $floats, $score;
-    die "Player items missing from pairtable" if @{$keys[0]} != @{$keys[1]} or
-	    @{$keys[1]} != @{$keys[2]} or @{$keys[2]} != @{$keys[3]} or
-	    grep { $keys[0]->[$_] != $keys[1]->[$_] or
-		 $keys[1]->[$_] != $keys[2]->[$_] or
-		$keys[2]->[$_] != $keys[3]->[$_] } 0..$#{$keys[0]};
-    my %identityCheck;
-    @identityCheck{@{$keys[0]}} = (1) x @{$keys[0]};
-    for my $id ( @ids )
-    {
-	die "Player $id not in pairing table" unless $identityCheck{$id};
-	delete $identityCheck{$id};
-    }
-    my @remainingIds = keys %identityCheck;
-    die "Players @remainingIds in pairing table, but not in tournament lineup"
-	    if @remainingIds;
+    my $pairingtable = LoadFile "./pairtable.yaml";
+    my ( $opponents, $roles, $floats, $score ) =
+        @$pairingtable{qw/opponents roles floats score/};
     for my $player ( @$lineup )
     {
-	my $id = $player->id;
-	$player->score( $score->{$id} );
+       my $id = $player->id;
+       $player->score( $score->{$id} );
     }
     my $lastround = $round;
     for my $round ( 1..$lastround )
    {
-       my (%games, @games);
-       for my $id ( @ids )
-       {
-	   next if $games{$id};
-	   my $player = $tourney->ided($id);
-	   my $opponentId = $opponents->{$id}->[$round-1];
-	   my $opponent = $tourney->ided($opponentId);
-	   my $opponentsOpponent = $opponents->{$opponentId}->[$round-1];
-	   die
-"Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent is $opponentsOpponent, not $id in round $round"
-	       unless $opponentId eq 'Bye' or $opponentsOpponent == $id;
-	   my $role = $roles->{$id}->[$round-1];
-	   my $opponentRole = $roles->{$opponentId}->[$round-1];
-	   die
-"Player $id is $role, and opponent $opponentId is $opponentRole, in round $round?"
-		unless $player and $opponent and $role and $opponentRole;
-	   die
-"Player $id has same $role role as opponent $opponentId in round $round?" if 
-		$role eq $opponentRole;
-	   my $contestants;
-	   if ( $opponentId eq 'Bye' ) { $contestants = { Bye => $player } }
-	   else { $contestants = { $role=>$player, $opponentRole=>$opponent } }
-	   my $game = Games::Tournament::Card->new(
-			round => $round,
-			contestants =>  $contestants );
-	    if ($round >= $lastround-1)
-	    {
-		my $float = $floats->{$id}->[$round-$lastround-1];
-		$game->float($player, $float);
-		unless ($opponentId eq 'Bye')
-		{
-		    my $opponentFloat =
-				$floats->{$opponentId}->[$round-$lastround-1];
-		    $game->float($opponent, $opponentFloat);
-		}
-	    }
-	    $games{$id} = $game;
-	    $games{$opponentId} = $game;
-	    push @games, $game;
-       }
+       my %opponents = map { $_ => $opponents->{$_}->[$round-1] } @ids;
+       my %roles = map { $_ => $roles->{$_}->[$round-1] } @ids;
+       my %floats =
+	   map { $_ => $floats->{$_}->[$round-$lastround-1]||undef } @ids;
+       my @games = $tourney->prepareCards( {
+	   round => $round, opponents => \%opponents,
+	    roles => \%roles, floats => \%floats } );
        $tourney->collectCards( @games );
     }
 }
@@ -160,7 +111,8 @@ my $results = $pairing->matchPlayers;
 my $matches = $results->{matches};
 my @games;
 
-for my $bracket ( reverse sort keys %$matches )
+my %number = map { $_ => $brackets{$_}->number } keys %brackets;
+for my $bracket ( sort { $number{$a} cmp $number{$b} } keys %$matches )
 {
     my $bracketmatches = $matches->{$bracket};
     push @games, grep { $_ if ref eq 'Games::Tournament::Card' }
@@ -212,6 +164,10 @@ DumpFile 'tourney.yaml', $tourney;
 DumpFile 'pairing.yaml', $pairing;
 DumpFile 'matches.yaml', \@games;
 DumpFile 'brackets.yaml', \%brackets;
+
+my @keys = sort {$a<=>$b} keys %{$schedule->{group}};
+Bless($schedule->{group})->keys( \@keys );
+
 DumpFile 'round.yaml', $schedule;
 
 __END__

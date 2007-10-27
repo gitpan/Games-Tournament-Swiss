@@ -22,111 +22,13 @@ use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Swiss;
 use Games::Tournament::Card;
 
-my @members = Load(<<'...');
----
-id: 1
-name: 'Bartolomäus,Chri'
-rating: 2810
-title: Unknown
----
-id: 2
-name: 'Sydow, Hardy'
-rating: 2800
-title: Unknown
----
-id: 3
-name: 'Prüsse, Horst'
-rating: 2780
-title: Unknown
----
-id: 4
-name: 'Kliewe, Hans - J'
-rating: 2775
-title: Unknown
----
-id: 5
-name: 'Zentgraf,Robert'
-rating: 2770
-title: Unknown
----
-id: 6
-name: 'Helms, Sven'
-rating: 2760
-title: Unknown
----
-id: 7
-name: 'Bauer, Norbert'
-rating: 2750
-title: Unknown
----
-id: 8
-name: 'Werner, Bernd- M'
-rating: 2740
-title: Unknown
----
-id: 9
-name: 'Kutschke, Peter'
-rating: 2735
-title: Unknown
----
-id: 10
-name: 'Baier, Karsten'
-rating: 2730
-title: Unknown
----
-id: 11
-name: 'Zoll, Detlef'
-rating: 2725
-title: Unknown
----
-id: 12
-name: 'Sager, Bernd'
-rating: 2720
-title: Unknown
----
-id: 13
-name: 'Zimmermann, Gord'
-rating: 2715
-title: Unknown
----
-id: 14
-name: 'Böttcher, Dr. Fr'
-rating: 2712
-title: Unknown
----
-id: 15
-name: 'Graffenberger, M'
-rating: 2710
-title: Unknown
----
-id: 16
-name: 'Huhnstock, Rico'
-rating: 2680
-title: Unknown
----
-id: 17
-name: 'Baumgarten, Thom'
-rating: 2660
-title: Unknown
----
-id: 18
-name: 'Zibell, Walter'
-rating: 2650
-title: Unknown
----
-id: 19
-name: 'Hauff, Andre'
-rating: 2640
-title: Unknown
----
-id: 20
-name: 'Springer, Guido'
-rating: 2638
-title: Unknown
-...
-
-my @lineup
-	= map { Games::Tournament::Contestant::Swiss->new(%$_) } @members;
+my $n = 20;
+my ($p1,$p2,$p3,$p4,$p5,$p6,$p7,$p8,$p9,$p10,$p11,$p12,$p13,$p14,$p15,$p16,$p17,$p18,$p19,$p20)
+	= map { Games::Tournament::Contestant::Swiss->new(
+	id => $_, name => chr($_+64), rating => 2000-$_, title => 'Nom') }
+	    (1..20);
+my @lineup =
+($p1,$p2,$p3,$p4,$p5,$p6,$p7,$p8,$p9,$p10,$p11,$p12,$p13,$p14,$p15,$p16,$p17,$p18,$p19,$p20);
 
 my $tourney = Games::Tournament::Swiss->new( entrants => \@lineup);
 
@@ -232,32 +134,18 @@ for my $player ( @lineup )
     my $id = $player->id;
     $player->score( $score->{$id} );
 }
+
 my $lastround = $round;
 for my $round ( 1..$lastround )
 {
-   my (%games, @games);
-   for my $id ( @ids )
-   {
-	next if $games{$id};
-	my $player = $tourney->ided($id);
-	my $opponentId = $opponents->{$id}->[$round-1];
-	my $opponent = $tourney->ided($opponentId);
-	my $role = $roles->{$id}->[$round-1];
-	my $opponentRole = $roles->{$opponentId}->[$round-1];
-	my $game = Games::Tournament::Card->new(
-	    round => $round,
-	    contestants => { $role => $player, $opponentRole => $opponent} );
-        if ($round >= $lastround-1)
-        {
-	    my $float = $floats->{$id}->[$round-$lastround-1];
-	    my $opponentFloat = $floats->{$opponent}->[$round-$lastround-1];
-	    $game->float($player, $float);
-	    $game->float($opponent, $opponentFloat);
-        }
-        $games{$id} = $game;
-        $games{$opponentId} = $game;
-        push @games, $game;
-   }
+    my %opponents = map { $_ => $opponents->{$_}->[$round-1] } @ids;
+    my %roles = map { $_ => $roles->{$_}->[$round-1] } @ids;
+    my %floats = ($round >= $lastround-1)?
+	map { $_ => $floats->{$_}->[$round-$lastround-1] } @ids:
+	undef;
+    my @games = $tourney->prepareCards( {
+       round => $round, opponents => \%opponents,
+	roles => \%roles, floats => \%floats } );
    $tourney->collectCards( @games );
 }
 

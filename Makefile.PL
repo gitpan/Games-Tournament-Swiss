@@ -5,6 +5,7 @@ WriteMakefile
           'NAME' => 'Games::Tournament::Swiss',
           'VERSION_FROM' => 'lib/Games/Tournament/Swiss.pm',
           'PREREQ_PM' => {
+                           'Getopt::Long' => '0',
                            'IO::All' => '0',
                            'List::MoreUtils' => '0',
                            'Parse::RecDescent' => '0',
@@ -17,7 +18,8 @@ WriteMakefile
                            'script_files/pair',
                            'script_files/pairingtable',
                            'script_files/pairstately',
-                           'script_files/pairtable2yaml'
+                           'script_files/pairtable2yaml',
+                           'script_files/pairyaml2txt'
                          ],
           'PL_FILES' => {}
         )

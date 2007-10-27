@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Bracket;
 
-# Last Edit: 2007 Oct 13, 10:55:54 AM
+# Last Edit: 2007 Oct 27, 11:36:10 AM
 # $Id: $
 
 use warnings;
@@ -13,7 +13,7 @@ use base qw/Games::Tournament::Swiss/;
 use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Card;
 use List::Util qw/max min reduce sum/;
-use List::MoreUtils qw/any/;
+use List::MoreUtils qw/any notall/;
 
 =head1 NAME
 
@@ -21,11 +21,11 @@ Games::Tournament::Swiss::Bracket - Players with same/similar scores pairable wi
 
 =head1 VERSION
 
-Version 0.01
+Version 0.05
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -147,15 +147,24 @@ sub immigrants {
 
  @floaters = $group->downFloaters
 
-Returns those members downfloated here from the previous bracket.
+Returns those members downfloated here from higher brackets.
 
 =cut
 
 sub downFloaters {
     my $self = shift;
-    return () unless @{ $self->members };
-    my $floaters = $self->immigrants;
-    grep { $_->floating and $_->floating =~ m/^Down/i } @$floaters;
+    my $members = $self->members;
+    return () unless @$members and $self->trueHetero;
+    my %members;
+    for my $member ( @$members )
+    {
+	my $score = $member->score;
+	push @{$members{$score}}, $member;
+    }
+    my $min = min keys %members;
+    delete $members{$min};
+    my @floaters = map { @$_ } values %members;
+    return @floaters;
 }
 
 
@@ -228,7 +237,7 @@ sub exit {
     my $myId = $exiter->id;
     my @stayers = grep { $_->id != $myId } @$members;
     my $number = $self->number;
-    die "Player $myId did not exit Bracket $number" if @stayers == @$members;
+    croak "Player $myId did not exit Bracket $number" if @stayers == @$members;
     $self->members(\@stayers);
     #my $immigrants = $self->immigrants;
     #if ( grep { $_ == $member } @$immigrants ) {
@@ -414,6 +423,31 @@ sub resetS12 {
 }
 
 
+=head2 resetShuffler
+
+    $previous->entry($_) for @returnees;
+    $previous->resetShuffler;
+    return C7;
+
+Take precautions to prevent transposing players who are no longer in the bracket in S2, or to make sure they ARE transposed, when finding a different pairing, before returning from C10,12,13 (C11?). Do this by resetting S1 and S2. Don't use this in the wrong place. We don't want to try the same pairing twice.
+
+=cut 
+
+sub resetShuffler {
+    my $self   = shift;
+    my $members = $self->members;
+    my $s1      = $self->s1;
+    my $s2      = $self->s2;
+    my %s1 = map { $_->id => $_ } @$s1;
+    my %s2 = map { $_->id => $_ } @$s2;
+    my %members = map { $_->id => $_ } @$members;
+    # my %tally; @tally{keys %members} = (0) x keys %members;
+    my $memberChangeTest = ( (notall { exists $members{$_} } keys %s1) or
+    (notall { exists $members{$_} } keys %s2) or (@$s1 + @$s2 != @$members));
+    $self->resetS12 if $memberChangeTest;
+}
+
+
 =head2 p
 
  $tables = $group->p
@@ -542,7 +576,9 @@ sub floatCheckWaive {
 	    $oldLevel eq 'B6Down' and $level eq 'B5Down' or
 	    $oldLevel eq 'B5Down' and $level eq 'B6Up' or 
 	    $oldLevel eq 'B6Up' and $level eq 'B5Up' or
-	    $oldLevel eq 'B5Up' and $level eq 'All';
+	    $oldLevel eq 'B5Up' and $level eq 'All' or
+	    # $oldLevel eq 'B5Down' and $level eq 'All' or
+	    $oldLevel eq 'All' and $level eq 'None';
 	$self->{floatCheck} = $level;
     }
     elsif ( defined $self->{floatCheck} ) { return $self->{floatCheck}; }
@@ -562,7 +598,7 @@ sub hetero {
     my $self = shift;
     my @members = @{$self->members};
     my %tally;
-    %tally = map { my $score=$_->score; $score,++$tally{$score} } @members;
+    $tally{$_->score}++ for @members;
     my @range = keys %tally;
     return 0 if @range == 1;
     my $min = min @range;
@@ -570,6 +606,26 @@ sub hetero {
     return 0 if $tally{$min} <= @members/2;
     return 1 if $tally{$min} > @members/2;
     return;
+}
+
+
+=head2 trueHetero
+
+	$group->trueHetero
+
+Gets whether this group is really heterogeneous, ie includes players with different scores, because they been downfloated from a higher score group, or upfloated from a lower score group, even if it is being treated as homogeneous. A group where half or more of the members have come from a higher bracket is regarded as homogeneous, but it is really heterogeneous.
+
+=cut
+
+sub trueHetero {
+    my $self = shift;
+    my @members = @{$self->members};
+    my %tally;
+    $tally{$_->score}++ for @members;
+    my @range = keys %tally;
+    return unless @range;
+    return 0 if @range == 1;
+    return 1;
 }
 
 
@@ -590,7 +646,7 @@ sub c7shuffler {
     my $position = shift;
     my $bigLastGroup = shift;
     my $s2       = $self->s2;
-    die "pos $position past end of S2" if $position > $#$s2;
+    die "C7 shuffle: pos $position past end of S2" if $position > $#$s2;
     my @players  = $self->rank(@$s2);
     @players  = $self->reverseRank(@$s2) if $bigLastGroup;
     # my @players  = @$s2;
@@ -859,20 +915,27 @@ sub c8swapper {
 
 =head2 _floatCheck
 
-        %b65TestResults = _floatCheck( \@passers, $checkLevels );
+        %b65TestResults = _floatCheck( \@passer, $checkLevels );
 
-Takes a list representing the pairing of a bracket (see the description for _getNonPaired), and the various up- and down-float check levels. Returns an anonymous hash keyed on 'badpos', the first element of the list responsible for violation of B6 or 5, and 'passers', an anonymous array of the same form as \@passers if there was no violation of any of the levels. A message noting the reason why the pairing is in violation of B6 or 5, and the id of the player involved is printed.
+Takes a list representing the pairing of a bracket (see the description for _getNonPaired), and the various up- and down-float check levels. Returns an anonymous hash keyed on 'badpos', the first element of the list responsible for violation of B6 or 5, and 'passer', an anonymous array of the same form as \@passer if there was no violation of any of the levels, and 'message', a string noting the reason why the pairing is in violation of B6 or 5, and the id of the player involved.
 
 =cut
 
 sub _floatCheck {
     my $self = shift;
     my $untested = shift;
+    my @paired = @$untested;
+    my @nopairs = $self->_getNonPaired(@paired);
     my $levels = shift;
+    die "Float checks are $levels?" unless $levels and ref($levels) eq 'ARRAY';
     my $pprime = $self->pprime;
+    my $s1 = $self->s1;
     my $badpos;
-    my $testees = $untested;
-    my $levelpassers;
+    my @pairtestee = @paired;
+    my @nopairtestee = @nopairs;
+    my @pairlevelpasser;
+    my @nopairlevelpasser;
+    my $message;
     B56: for my $level (@$levels)
     {
 	my ($round, $direction, $checkedOne, $id);
@@ -880,50 +943,63 @@ sub _floatCheck {
 	else { $round = 2; }
 	if( $level =~ m/Down$/i) { $direction = 'Down'; $checkedOne = 0 }
 	elsif ( $level =~ m/Up$/i ) { $direction = 'Up'; $checkedOne = 1 }
-	else { $levelpassers = $testees; last B56 }
-	POS: for my $pos ( 0 .. $#$testees ) {
-	    next unless defined $testees->[$pos];
-	    my @pair = ( $testees->[$pos]->[0], $testees->[$pos]->[1] );
+	else { @pairlevelpasser = @pairtestee; last B56 }
+	for my $pos ( 0 .. $#$s1 ) {
+	    next unless defined $pairtestee[$pos];
+	    my @pair = ( $pairtestee[$pos]->[0], $pairtestee[$pos]->[1] );
 	    my @score = map { $_->score } @pair;
 	    my @float = map { $_->floats( -$round ) } @pair;
 	    my $test = 0;
 	    $test = ( $score[0] == $score[1] or $float[$checkedOne] ne
 		$direction ) unless $direction eq 'None';# XXX check both?  
-	    if ( $test ) { $levelpassers->[$pos] = \@pair; }
-	    else { $badpos = $pos; $id = $pair[$checkedOne]->id; last POS; }
+	    if ( $test ) { $pairlevelpasser[$pos] = \@pair; }
+	    else {
+		$badpos = defined $badpos? $badpos: $pos;
+		$id ||= $pair[$checkedOne]->id;
+	    }
 	}
-	unless ( (grep { defined $_ } @$levelpassers) >= $pprime )
+	if (@nopairtestee and ( not $self->hetero or
+					(grep {defined} @nopairtestee) == 1 ))
 	{
-	    my $pluspos = $badpos+1;
-	    print
-"$level, table $pluspos: $id NOK. Floated $direction $round rounds ago\n";
-	    return badpos => $badpos, passers => undef;
-	}
-	my @nopairs = $self->_getNonPaired(@$levelpassers);
-	if (@nopairs and ( not $self->hetero or
-					(grep {defined} @nopairs)==1) )
-	{
-	    for my $pos ( 0 .. $#nopairs ) {
-		for my $player ( @{$nopairs[$pos]} ) {
-		    my $test = ( defined $player and ( $player->floats(-1)
-			and $player->floats(-1) eq "Down" or
-			$player->floats(-2) and $player->floats(-2) eq
-			"Down" ) );
-		    if ( $test ) {
-			my $downfloater = $player->id;
-			print
-	"B56: NOK. Unpaired $downfloater floated Down 1 or 2 rounds ago\n";
-			return badpos => $pos, passers => undef;
-		    }
+	    #my $potentialDownFloaters =
+	    #    	grep { grep { defined } @$_ } @nopairtestee;
+	    for my $pos ( 0 .. $#nopairtestee ) {
+		next unless defined $nopairtestee[$pos];
+		my @pair = @{ $nopairtestee[$pos] } if defined
+		    $nopairtestee[$pos] and ref $nopairtestee[$pos] eq 'ARRAY';
+		my $tableTest = 0;
+		my $idCheck;
+		for my $player ( @pair) {
+		    my $test = ( not defined $player or
+			    ($player->floats(-$round) ne "Down") );
+		    $idCheck ||= $player->id if $player and not $test;
+		    $tableTest++ if $test;
+		}
+		if ( $tableTest >= 2 ) { $nopairlevelpasser[$pos] = \@pair; }
+		else {
+		    $badpos = defined $badpos? $badpos: $pos;
+		    $id = $idCheck if $idCheck;
 		}
 	    }
 	}
+	my @retainables = grep { defined } @pairlevelpasser ;#
+			# , grep { defined } @nopairlevelpasser;
+	# my @nonfloaters = grep { grep { defined } @$_ } @retainables;
+	if ( @retainables < $pprime or defined $badpos )
+	{
+	    my $pluspos = $badpos+1;
+	    $message =
+"$level, table $pluspos: $id NOK. Floated $direction $round rounds ago";
+	    return badpos => $badpos, passer => undef, message => $message;
+	}
     }
     continue {
-	$testees = $levelpassers;
-	$levelpassers = undef;
+	@pairtestee = @pairlevelpasser;
+	@nopairtestee = @nopairlevelpasser;
+	undef @pairlevelpasser;
+	undef @nopairlevelpasser;
     }
-    return badpos => undef, passers => $levelpassers;
+    return badpos => undef, passer => \@pairlevelpasser, message => "B56: OK.";
 }
 
 

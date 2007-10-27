@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Config;
 
-# Last Edit: 2007 Oct 11, 09:20:09 AM
+# Last Edit: 2007 Oct 23, 01:28:59 PM
 # $Id: $
 
 use warnings;
@@ -103,6 +103,22 @@ sub scores {
     if ($scores) { $self->{scores} = $scores; }
     elsif ( $self->{scores} ) { return %{ $self->{scores} }; }
     else { return ( win => 1, loss => 0, draw => 0.5, absent => 0, bye => 1 ) }
+}
+
+
+=head2 abbreviation
+
+Getter/setter of the abbreviations used and their full translations. The default is W: White, B: Black, 1: Win, 0: Loss, '0.5': Draw, '=': Draw.
+
+=cut
+
+sub abbreviation {
+    my $self   = shift;
+    my $abbreviation = shift;
+    if ($abbreviation) { $self->{abbreviation} = $abbreviation; return; }
+    elsif ( $self->{abbreviation} ) { return %{ $self->{abbreviation} }; }
+    else { return ( W => 'White', B => 'Black', 1 => 'Win', 0 => 'Loss',
+    0.5 => 'Draw', '=' => 'Draw' ); }
 }
 
 

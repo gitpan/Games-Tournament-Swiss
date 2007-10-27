@@ -66,6 +66,8 @@ my $p        = $pairing->matchPlayers;
 my %m = map { $_ => $p->{matches}->{$_} } keys %{ $p->{matches} };
 $t->round(1);
 
+# Round 1:  1 2 3 4 (0),
+
 my @tests = (
 [ $m{0}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
 [ $m{0}->[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
@@ -84,6 +86,8 @@ my $pair2  = $t->pairing( \%b2 );
 my $p2        = $pair2->matchPlayers;
 my %m2 = map { $_ => $p2->{matches}->{$_} } keys %{ $p2->{matches} };
 $t->round(2);
+
+# Round 2:  1 4 (1), 2 3 (0),
 
 push @tests, (
 [ $m2{1}->[0]->isa('Games::Tournament::Card'),	'@m2 isa'],
@@ -105,13 +109,15 @@ my $p3 = $pair3->matchPlayers;
 my %m3 = map { $_ => $p3->{matches}->{$_} } keys %{ $p3->{matches} };
 $t->round(3);
 
+# Round 3:  4 (2), 1 2 (1), 3 (0),
+
 push @tests, (
-[ $m3{1}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
 [ $m3{0}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $a == $m3{1}->[0]->contestants->{White},	'@m3 White1'],
-[ $b == $m3{1}->[0]->contestants->{Black},	'@m3 Black1'],
-[ $c == $m3{0}->[0]->contestants->{White},	'@m3 White0'],
-[ $d == $m3{0}->[0]->contestants->{Black},	'@m3 Black0'],
+[ $m3{0}->[1]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $c == $m3{0}->[0]->contestants->{White},	'@m3 White1'],
+[ $d == $m3{0}->[0]->contestants->{Black},	'@m3 Black1'],
+[ $a == $m3{0}->[1]->contestants->{White},	'@m3 White0'],
+[ $b == $m3{0}->[1]->contestants->{Black},	'@m3 Black0'],
 );
 
 plan tests => $#tests + 1;

@@ -1,18 +1,18 @@
 Games-Tournament-Swiss
 
-Version 0.11
+Version 0.12
 
-I wasn't happy with 0.10 and there's a major change in the C10 code, so I'm putting this out quickly. If you thought that the pairings you were getting were correct, you were mistaken, or your pairing table wasn't generating any unpairable remainder groups!
+I have been working on C11 and C12, and although there is more to do on C12, I want to put this out. If the pairings you were getting were correct on earlier versions, they were probably not exercising the C11,12 code!
+
+This is a major revision. In addition, we have logging. Now no output about pairing progress is the default. Messages are logged using the loggedProcedures method. The log is accessed using tailLog, catLog. Put $pairing->loggedProcedures(qw/C1 C6PAIRS C7/) in your script somewhere.
 
 Warning!
 
 This is ALPHA-level software. Although it attempts to implement the FIDE Swiss Rules, it may not pair players correctly. It may take over your computer, and force you to reboot. It may DELETE files. It may DESTROY your computer. Use at your own risk.
 
+I got only one CPAN Testers failure with 0.11. And there have been major improvements in modularity in writing tests. I am thinking about issuing a call for tests.
+
 NOTICE: More tests are needed. If you have an interesting pairing table that is difficult to pair, please report it as a bug at http://search.cpan.org/~drbean/Games-Tournament-Swiss/. The code to pair players applying relative criteria should now be better, but only one or two tests test it. So try to break Games::Tournament::Swiss and report your results!
-
-This is a minor/major revision. I am feeling I am getting a grip. The code is 'talking back.' Working with the brackets' hash-based indexing is interesting. Life is good.
-
-I didn't get any cpan tester failures with 0.09, the broken version. I'm getting more with 0.10, which I also thought was broken. I wonder what will happen with 0.11.
 
 I recommend looking at the scripts. If you want some more help, look at the 
 tests. Again, scripts are still likely to break, but the purpose of that is to get you to write your own scripts. (ha-ha) Look at the scripts and the tests.
