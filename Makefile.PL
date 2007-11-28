@@ -5,10 +5,10 @@ WriteMakefile
           'NAME' => 'Games::Tournament::Swiss',
           'VERSION_FROM' => 'lib/Games/Tournament/Swiss.pm',
           'PREREQ_PM' => {
-                           'Getopt::Long' => '0',
                            'IO::All' => '0',
                            'List::MoreUtils' => '0',
                            'Parse::RecDescent' => '0',
+                           'Test::Base' => '0',
                            'Test::More' => '0',
                            'YAML' => '0'
                          },

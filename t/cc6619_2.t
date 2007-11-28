@@ -4,6 +4,8 @@
 # a second, similar pairing table
 # http://chesschat.org/showpost.php?p=169490&postcount=52
 # like the first, the pairings accepted in this test are also disputable
+# http://chesschat.org/showpost.php?p=173855&postcount=90
+
 
 use lib qw/t lib/;
 
@@ -132,27 +134,57 @@ $tourney->round(5);
 
 # Round 5:  1 2 (3.5), 4 (3), 3 5 7 (2), 6 8 9 10 (1),
 
-# SwissPerfect pairings, straight by book.
+# Swiss Manager pairings
 
 my @tests = (
-[ $m{3}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m{1}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
-[ $m{1}->[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $m{1}->[2]->isa('Games::Tournament::Card'),	'$m2 isa'],
-[ $m{1}->[3]->isa('Games::Tournament::Card'),	'$m3 isa'],
-[ $two == $m{3}->[0]->contestants->{White},	'$m0 White'],
-[ $four == $m{3}->[0]->contestants->{Black},	'$m0 Black'],
-[ $eight == $m{1}->[0]->contestants->{White},	'$m0 White'],
-[ $one == $m{1}->[0]->contestants->{Black},	'$m0 Black'],
-[ $three == $m{1}->[1]->contestants->{White},	'$m1 White'],
-[ $ten == $m{1}->[1]->contestants->{Black},	'$m1 Black'],
-[ $nine == $m{1}->[2]->contestants->{White},	'$m2 White'],
-[ $five == $m{1}->[2]->contestants->{Black},	'$m2 Black'],
-[ $six == $m{1}->[3]->contestants->{White},	'$m3 White'],
-[ $seven == $m{1}->[3]->contestants->{Black},	'$m3 Black'],
+[ $m{3}->[0] and $m{3}->[0]->isa('Games::Tournament::Card'),	'$m3 isa'],
+[ $m{2}->[0] and $m{1}->[0]->isa('Games::Tournament::Card'),	'$m2 isa'],
+[ $m{1}->[0] and $m{1}->[0]->isa('Games::Tournament::Card'),	'$m1 isa'],
+[ $m{1}->[1] and $m{1}->[1]->isa('Games::Tournament::Card'),	'$m11 isa'],
+[ $m{'1Remainder'}->[0] and $m{'1Remainder'}->[0]->isa('Games::Tournament::Card'),	'$m1R isa'],
+
+[ $m{3}->[0] and $two == $m{3}->[0]->contestants->{White},	'$m3 White'],
+[ $m{3}->[0] and $four == $m{3}->[0]->contestants->{Black},	'$m3 Black'],
+[ $m{2}->[0] and $five == $m{2}->[0]->contestants->{White},	'$m2 White'],
+[ $m{2}->[0] and $one == $m{2}->[0]->contestants->{Black},	'$m2 Black'],
+[ $m{1}->[0] and $three == $m{1}->[0]->contestants->{White},	'$m10 White'],
+[ $m{1}->[0] and $nine == $m{1}->[0]->contestants->{Black},	'$m10 Black'],
+[ $m{1}->[1] and $six == $m{1}->[1]->contestants->{White},	'$m11 White'],
+[ $m{1}->[1] and $seven == $m{1}->[1]->contestants->{Black},	'$m11 Black'],
+[ $m{'1Remainder'}->[0] and $eight == $m{'1Remainder'}->[0]->contestants->{White},	'$m1R White'],
+[ $m{'1Remainder'}->[0] and $ten == $m{'1Remainder'}->[0]->contestants->{Black},	'$m1R Black'],
 );
 
-plan tests => $#tests + 1;
+my @teststoo;
+
+plan tests => $#tests + 1 + 15;
+# plan tests => $#tests + $#teststoo + 2;
+# plan tests => $#tests + 1;
+
+SKIP: 
+{ # SwissPerfect pairings
+
+skip "Not SwissPerfect season", 15 if 1;
+@teststoo = (
+[ $m{3}->[0] and $m{3}->[0]->isa('Games::Tournament::Card'),	'$m3 isa'],
+[ $m{1}->[0] and $m{1}->[0]->isa('Games::Tournament::Card'),	'$m10 isa'],
+[ $m{1}->[1] and $m{1}->[1]->isa('Games::Tournament::Card'),	'$m11 isa'],
+[ $m{1}->[2] and $m{1}->[2]->isa('Games::Tournament::Card'),	'$m12 isa'],
+[ $m{1}->[3] and $m{1}->[3]->isa('Games::Tournament::Card'),	'$m13 isa'],
+
+[ $m{3}->[0] and $two == $m{3}->[0]->contestants->{White},	'$m3 White'],
+[ $m{3}->[0] and $four == $m{3}->[0]->contestants->{Black},	'$m3 Black'],
+[ $m{1}->[0] and $eight == $m{1}->[0]->contestants->{White},	'$m10 White'],
+[ $m{1}->[0] and $one == $m{1}->[0]->contestants->{Black},	'$m10 Black'],
+[ $m{1}->[1] and $three == $m{1}->[1]->contestants->{White},	'$m11 White'],
+[ $m{1}->[1] and $ten == $m{1}->[1]->contestants->{Black},	'$m11 Black'],
+[ $m{1}->[2] and $nine == $m{1}->[2]->contestants->{White},	'$m12 White'],
+[ $m{1}->[2] and $five == $m{1}->[2]->contestants->{Black},	'$m12 Black'],
+[ $m{1}->[3] and $six == $m{1}->[3]->contestants->{White},	'$m13 White'],
+[ $m{1}->[3] and $seven == $m{1}->[3]->contestants->{Black},	'$m13 Black'],
+);
+
+}
 
 map { ok( $_->[0], $_->[ 1, ], ) } @tests;
 

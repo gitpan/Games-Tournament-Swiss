@@ -1,15 +1,21 @@
 package Games::Tournament::Contestant;
 
-# Last Edit: 2007 Oct 27, 11:29:58 AM
+# Last Edit: 2007 Nov 28, 07:37:12 AM
 # $Id: $
 
 use warnings;
 use strict;
+use Carp;
 
 use base qw/Games::Tournament/;
 use List::Util qw/sum/;
 use List::MoreUtils qw/all/;
-use constant SCORES => %Games::Tournament::Swiss::Config::scores;
+use constant ROLES => @Games::Tournament::Swiss::Config::roles?
+			@Games::Tournament::Swiss::Config::roles:
+			Games::Tournament::Swiss::Config->roles;
+use constant SCORES => %Games::Tournament::Swiss::Config::scores?
+			%Games::Tournament::Swiss::Config::scores:
+			Games::Tournament::Swiss::Config->scores;
 
 # use overload qw/0+/ => 'id', qw/""/ => 'name', fallback => 1;
 
@@ -19,7 +25,7 @@ Games::Tournament::Contestant  A competitor matched with others over a series of
 
 =head1 VERSION
 
-Version 0.03
+Version 0.02
 
 =cut
 
@@ -110,6 +116,8 @@ sub myOpponent {
     my $self        = shift;
     my $id          = $self->id;
     my $game        = shift;
+    croak "Looking for opponent, but no contestants in $game game" unless
+		    $game and $game->can('contestants');
     my $contestants = $game->contestants;
     my @contestants = values %$contestants;
     my @ids         = map { $_->id } @contestants;
@@ -216,8 +224,7 @@ sub score {
 	$rounds = $deepblue->met(@grandmasters)
 	next if $deepblue->met($capablanca)
 
-Returns an anonymous array either of the rounds in which $deepblue remembers meeting the members of @grandmasters or of the empty string '' if there is no record of such a meeting. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check $deepblue's partners' cards. (Assumes players do not meet more than once!)
-This is same as Games::Tournament::met or different?
+Returns an anonymous hash, keyed on @grandmasters' ids, either of the gamecards in which $deepblue remembers meeting the members of @grandmasters or of the empty string '' if there is no record of such a meeting. Don't forget to tally $deepblue's scorecard with the appropriate games first (using collectCards?)! We don't check $deepblue's partners' cards. (Assumes players do not meet more than once!) Don't confuse this with Games::Tournament::met!
 
 =cut
 
@@ -225,20 +232,20 @@ sub met {
     my $self      = shift;
     my @opponents = @_;
     my $games     = $self->play;
-
-    # my $id = $partner->id;
-    # my %opponentsMet;
-    # @opponentsMet{ keys %$games } = ('') x keys %$games;
-    # map { $opponentsMet{$games->{$_}->{opponent}->id} = $_} keys %$games;
-    # return $opponentsMet{$id};
+    my @rounds = keys %$games;
     my @ids = map { $_->id } @opponents;
-    my %opponentsMet;
-    @opponentsMet{@ids} = ('') x @ids;
-    for my $game ( keys %$games ) {
-        $opponentsMet{ $games->{$game}->{opponent}->id } = $_;
+    my %gameAgainst;
+    @gameAgainst{@ids} = ('') x @ids;
+    for my $round ( @rounds )
+    {
+	my $gameInRound = $games->{$round};
+	next unless UNIVERSAL::isa $gameInRound, 'Games::Tournament::Card';
+        my $opponent = $self->myOpponent($gameInRound);
+	my $opponentId = $opponent->id;
+        $gameAgainst{$opponentId} = $gameInRound;
     }
-    my @opponentsMet = map { $opponentsMet{ $_->id } } @opponents;
-    return \@opponentsMet;
+    carp $self->id . " played @ids? Where are the cards?" unless %gameAgainst;
+    return \%gameAgainst;
 }
 
 
@@ -311,17 +318,21 @@ sub rating {
 =head2 play
 
 	$games = $member->play;
-	$games = $member->play(
-		{ 1 => { opponent => $grandmaster, result => 'Loss' } });
+	$games = $member->play( { $lastround => $game } );
 
-Sets/gets a hash reference to the result of the pairings in each of the rounds played so far. Don't use this to enter a player's match result. Use $p->writeCard instead. Implementation: The keys of the hash are the round numbers and the values are themselves hash references, to the other player and whether the result was a 'Win', 'Loss', or 'Draw', with as keys, 'opponent' and 'result', NO. I think it is the gamecard of the player in that round. Or is that the play accessor for tournaments?
+Sets/gets a hash reference to the result of the pairings in each of the rounds played so far. Don't use this to enter a player's match result. Use $tourney->collectCards. Implementation: The keys of the hash are the round numbers and the values are the gamecard of the player in that round. Very similar to the play accessor for tournaments, so this is not good repetition?
 
 =cut
 
 sub play {
     my $self = shift;
     my $play = shift;
-    if ( defined $play ) { $self->{play} = $play; }
+    if ( defined $play ) {
+	my @rounds = keys %$play;
+	for my $round ( @rounds ) { 
+	    $self->{play}->{$round} = $play->{$round};
+	}
+    }
     elsif ( $self->{play} ) { return $self->{play}; }
 }
 

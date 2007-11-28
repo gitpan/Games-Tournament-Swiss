@@ -112,12 +112,12 @@ $t->round(3);
 # Round 3:  4 (2), 1 2 (1), 3 (0),
 
 push @tests, (
+[ $m3{1}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
 [ $m3{0}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $m3{0}->[1]->isa('Games::Tournament::Card'),	'@m3 isa'],
+[ $a == $m3{1}->[0]->contestants->{White},	'@m3 White0'],
+[ $b == $m3{1}->[0]->contestants->{Black},	'@m3 Black0'],
 [ $c == $m3{0}->[0]->contestants->{White},	'@m3 White1'],
 [ $d == $m3{0}->[0]->contestants->{Black},	'@m3 Black1'],
-[ $a == $m3{0}->[1]->contestants->{White},	'@m3 White0'],
-[ $b == $m3{0}->[1]->contestants->{Black},	'@m3 Black0'],
 );
 
 plan tests => $#tests + 1;

@@ -1,7 +1,17 @@
 ---
+version: 0.15
+date: Nov 28, 2007
+revision: about 1645
+changes:
+  - Preference update tweaking, tests
+  - Config provides defaults overrideable in BEGIN block
+  - breadth-first C11 searching with X inheritance by remainder groups
+  - more attractive pairing test writer interface
+
+---
 version: 0.12
 date: Oct 27, 2007
-revision: about 1480
+revision: about 1536
 changes:
   - greater understanding of proactive float checking in C6
   - large C11, C12 changes

@@ -187,16 +187,16 @@ TODO: {
 	# skip $problem, 12 if 1;
 	@teststoo = (
 	[ $m4{2}->[0]->isa('Games::Tournament::Card'),	'42 isa'],
-	[ $m4{'1.5C11Repair'}->[0]->isa('Games::Tournament::Card'), '415R isa'],
-	[ $m4{'1.5C11RepairRemainder'}->[0]->isa('Games::Tournament::Card'), '415RR isa'],
- 	[ $m4{'1.5C11RepairRemainderBye'}->[0]->isa('Games::Tournament::Card'), '415RRB isa'],
+	[ $m4{'1.5'}->[0]->isa('Games::Tournament::Card'), '415R isa'],
+	[ $m4{'1.5Remainder'}->[0]->isa('Games::Tournament::Card'), '415R isa'],
+ 	[ $m4{'1.5RemainderBye'}->[0]->isa('Games::Tournament::Card'), '415RB isa'],
 	[ $five == $m4{2}->[0]->contestants->{White},	'4 White0'],
 	[ $six == $m4{2}->[0]->contestants->{Black},	'4 Black0'],
-	[ $seven == $m4{'1.5C11Repair'}->[0]->contestants->{White}, '4R White'],
-	[ $three == $m4{'1.5C11Repair'}->[0]->contestants->{Black}, '4R Black'],
-	[ $two == $m4{'1.5C11RepairRemainder'}->[0]->contestants->{White}, '4RR White'],
-	[ $four == $m4{'1.5C11RepairRemainder'}->[0]->contestants->{Black},	'4RR Black'],
-	[ $one == $m4{'1.5C11RepairRemainderBye'}->[0]->contestants->{Bye},	'4RRB Bye'],
+	[ $seven == $m4{'1.5'}->[0]->contestants->{White}, '4R White'],
+	[ $three == $m4{'1.5'}->[0]->contestants->{Black}, '4R Black'],
+	[ $two == $m4{'1.5Remainder'}->[0]->contestants->{White}, '4R White'],
+	[ $four == $m4{'1.5Remainder'}->[0]->contestants->{Black}, '4R Black'],
+	[ $one == $m4{'1.5RemainderBye'}->[0]->contestants->{Bye}, '4RB Bye'],
 	);
 }
 

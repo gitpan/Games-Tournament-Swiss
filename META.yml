@@ -1,6 +1,6 @@
 ---
 name: Games-Tournament-Swiss
-version: 0.14
+version: 0.15
 author:
   - 'Dr Bean <drbean, followed by the at mark (@), cpan, then a dot, and finally, org>'
 abstract: FIDE Swiss Same-Rank Contestant Pairing
@@ -8,14 +8,13 @@ license: perl
 requires:
   List::MoreUtils: 0
 recommends:
-  Getopt::Long: 0
   IO::All: 0
   Parse::RecDescent: 0
   YAML: 0
 build_requires:
-  Getopt::Long: 0
   IO::All: 0
   Parse::RecDescent: 0
+  Test::Base: 0
   Test::More: 0
   YAML: 0
 provides:
@@ -30,26 +29,26 @@ provides:
     version: 0.03
   Games::Tournament::Contestant::Swiss:
     file: lib/Games/Tournament/Contestant/Swiss.pm
-    version: 0.02
+    version: 0.03
   Games::Tournament::Contestant::Swiss::Preference:
     file: lib/Games/Tournament/Contestant/Swiss/Preference.pm
-    version: 0.02
+    version: 0.04
   Games::Tournament::Swiss:
     file: lib/Games/Tournament/Swiss.pm
-    version: 0.14
+    version: 0.15
   Games::Tournament::Swiss::Bracket:
     file: lib/Games/Tournament/Swiss/Bracket.pm
-    version: 0.05
+    version: 0.06
   Games::Tournament::Swiss::Config:
     file: lib/Games/Tournament/Swiss/Config.pm
-    version: 0.02
+    version: 0.03
   Games::Tournament::Swiss::Procedure:
     file: lib/Games/Tournament/Swiss/Procedure.pm
-    version: 0.03
+    version: 0.04
   Games::Tournament::Swiss::Procedure::Dummy:
     file: lib/Games/Tournament/Swiss/Procedure/Dummy.pm
-    version: 0.02
+    version: 0.03
   Games::Tournament::Swiss::Procedure::FIDE:
     file: lib/Games/Tournament/Swiss/Procedure/FIDE.pm
-    version: 0.12
+    version: 0.13
 generated_by: Module::Build version 0.2611

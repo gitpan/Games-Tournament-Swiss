@@ -1,13 +1,19 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Oct 27, 11:29:23 AM
+# Last Edit: 2007 Nov 28, 07:32:56 AM
 # $Id: $
 
 use warnings;
 use strict;
+use Carp;
+
+use List::Util qw/first/;
+use List::MoreUtils qw/all/;
 
 use Games::Tournament::Swiss::Config;
-use constant ROLES      => @Games::Tournament::Swiss::Config::roles;
+use constant ROLES => @Games::Tournament::Swiss::Config::roles?
+			@Games::Tournament::Swiss::Config::roles:
+			Games::Tournament::Swiss::Config->roles;
 use constant FIRSTROUND => $Games::Tournament::Swiss::Config::firstround;
 
 =head1 NAME
@@ -55,14 +61,14 @@ sub new {
 
  @rankings = $tourney->rank(@players)
 
-Ranks a list of Games::Tournament::Contestant player objects by score, rating, title and name if they all have a score, otherwise ranks them by rating, title and name.
+Ranks a list of Games::Tournament::Contestant player objects by score, rating, title and name if they all have a score, otherwise ranks them by rating, title and name. This is the same ordering that is used to determine pairing numbers in a swiss tournament.
 
 =cut
 
 sub rank {
     my $self    = shift;
     my @players = @_;
-    unless ( grep { not defined $_->score } @players ) {
+    if ( all { defined $_->score } @players ) {
         sort {
                  $b->score <=> $a->score
               || $b->rating <=> $a->rating
@@ -134,7 +140,7 @@ sub ided {
     my $self        = shift;
     my $id          = shift;
     my @contestants = @{ $self->entrants };
-    return ( grep { $_->id eq $id } @contestants )[0];
+    return first { $_->id eq $id } @contestants;
 }
 
 
@@ -180,7 +186,7 @@ sub roleCheck {
 	@rounds = $tourney->met($deepblue, @grandmasters)
 	next if $tourney->met($deepblue, $capablanca)
 
-In list context, returns an array of the rounds in which $deepblue met the corresponding member of @grandmasters (and of the empty string '' if they haven't met.) In scalar context, returns the number of grandmasters met. Don't forget to collect scorecards in the appropriate games first! (Assumes players do not meet more than once!) This is same as Games::Tournament::Contestant::met or different?
+In list context, returns an array of the rounds in which $deepblue met the corresponding member of @grandmasters (and of the empty string '' if they haven't met.) In scalar context, returns the number of grandmasters met. Don't forget to collect scorecards in the appropriate games first! (Assumes players do not meet more than once!) This is NOT the same as Games::Tournament::Contestant::met!
 
 =cut
 
@@ -191,12 +197,15 @@ sub met {
     my @ids       = map { $_->id } @opponents;
     my $games     = $self->play;
     my $rounds    = $self->round;
+    my %roundGames = map { $_ => $games->{$_} } FIRSTROUND .. $rounds;
+    carp "No games to round $rounds. Where are the cards?" unless %roundGames;
     my @meetings;
     @meetings[ 0 .. $#opponents ] = ('') x @opponents;
     my $n = 0;
     for my $other (@opponents) {
-        for my $round ( 1 .. $rounds ) {
-            my $game = $games->{$round}->{ $other->id };
+        for my $round ( FIRSTROUND .. $rounds ) {
+            my $game = $roundGames{$round}{ $other->id };
+	    next unless $game and $game->can('contestants');
             $meetings[$n] = $round if $other->myOpponent($game) == $player;
         }
     }

@@ -1,12 +1,20 @@
 package Games::Tournament::Contestant::Swiss::Preference;
 
-# Last Edit: 2007 Oct 27, 11:30:31 AM
+# Last Edit: 2007 Nov 28, 05:53:00 PM
 # $Id: $
 
 use warnings;
 use strict;
+use Carp;
 
-use constant ROLES => @Games::Tournament::Swiss::Config::roles;
+use List::Util qw/first/;
+use List::MoreUtils qw/any/;
+
+use Games::Tournament::Swiss::Config;
+
+use constant ROLES => @Games::Tournament::Swiss::Config::roles?
+			@Games::Tournament::Swiss::Config::roles:
+			Games::Tournament::Swiss::Config->roles;
 
 use base qw/Games::Tournament/;
 
@@ -18,11 +26,11 @@ Games::Tournament::Contestant::Swiss::Preference  A competitor's right to a role
 
 =head1 VERSION
 
-Version 0.02
+Version 0.04
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
@@ -30,7 +38,7 @@ our $VERSION = '0.02';
 
 =head1 DESCRIPTION
 
-The preference, or expectation/right/duty one has with reference to a role, eg White, in the next round depends on the difference between the number of games previously played in it and in the alternative roles, and is either Mild, Strong, or Absolute. The more games played in other roles than in this role, the greater the right/duty to play the next game in this role. The FIDE Swiss Rules (C04.1) represent the difference as the number of Games as White minus the number as Black, so a greater number of games as Black is a negative number and of White a positive number. For equal number of games, +0 indicates the last game was as White, and -0 indicates the last game was as Black. So +0 represents a Mild preference for Black and -0 for White. This implementation uses a 'direction' field to perform the same function as the +/- sign.
+The preference, or expectation/right/duty one has with reference to a role, eg White, in the next round depends on the difference between the number of games previously played in it and in the alternative roles, and is either Mild, Strong, or Absolute. The more games played in other roles than in this role, the greater the right/duty to play the next game in this role. The FIDE Swiss Rules (C04.1) represent the difference as the number of Games as White minus the number as Black, so a greater number of games as Black is a negative number and of White a positive number. For equal number of games, +0 indicates the last game was as White, and -0 indicates the last game was as Black. So +0 represents a Mild preference for Black and -0 for White. This implementation uses a 'sign' field to perform the same function as the +/- sign.
 As an API, the strength method returns 'Mild', 'Strong', or 'Absolute' and the role method returns 'Black', 'White', or whatever the preferred role is, respecting the 2 consecutive games in the same role rule. A7
 
 =head1 METHODS
@@ -38,19 +46,17 @@ As an API, the strength method returns 'Mild', 'Strong', or 'Absolute' and the r
 =head2 new
 
     $pref = Games::Tournament::Contestant::Swiss::Preference->new(
-	difference => 0, direction => 'Black', round => 0 );
+	difference => 0, sign => 'Black', round => 0 );
 
-The default round and difference are 0. The default direction is ''.
+The default difference is 0. The default sign is ''.
 
 =cut
 
 sub new {
     my $self = shift;
     my %args = @_;
-    $args{direction}  = '' unless $args{direction};
+    $args{sign}  = '' unless $args{sign};
     $args{difference} = 0  unless $args{difference};
-
-    # $args{lastTwo} = ',' unless $args{lastTwo};
     my $pref = bless \%args, $self;
     return $pref;
 }
@@ -58,68 +64,57 @@ sub new {
 
 =head2 update
 
-	$pref->update( $oldRoles  )
+	$pref->update( \@oldRoles  )
 
-	Updates the difference (ie, the internal representation of preference) on the basis of the last 2 given roles. Minimal sanity check is performed. $oldRoles is a history of roles in previous rounds. The two last roles are needed to determine the preference if the same role was taken in the last 2 games. (Is this true? $self->direction can be other than the last role?) Byes are passed over. TODO What about absences?
+	Updates the difference (ie, the internal representation of preference) on the basis of the last role (and second-last role) in \@oldRoles. A minimal sanity check is performed. \@oldRoles is a history of roles in previous rounds, and it is expected only the last role of this history has not yet been used to update the preference. That is, this method must be used round-by-round to keep a players preference up to date. However, the second-last role (in addition to the last role) is also needed to determine the preference in cases when the same role was taken in the last 2 games. (Is this true? $self->sign can be other than the last role?) So for updates after the second round, make sure the history is at least 2 elements long. Byes and absences are passed over.
 
 =cut
 
 sub update {
     my $self     = shift;
-    my $oldRoles = shift;
-    return unless grep { $_ eq $oldRoles->[-1] } ROLES;
-    my @reverseRoles = grep {
-        my $role = $_;
-        grep { $_ eq $role } ROLES
-    } reverse @$oldRoles;
+    my $roles = shift;
+    my $message = "Preference update: ";
+    return unless any { $roles->[-1] eq $_ } ROLES;
+    my @byeOut = grep { my $role = $_; any { $role eq $_ } ROLES } @$roles;
+    my @reverseRoles = reverse @byeOut;
     my $lastRole       = $reverseRoles[0];
     my $before         = $reverseRoles[1];
+    my $oneBeforeThat = $reverseRoles[2];
+    $message .= "3-game run as $lastRole\n" if $before and $oneBeforeThat and
+		    $oneBeforeThat eq $before and $before eq $lastRole;
     my $difference     = $self->difference;
-    my $direction      = $self->direction;
-    my $otherDirection = ( grep { $_ ne $direction } ROLES )[0];
-    unless ( $direction and defined $difference ) {
-        $direction  = $lastRole;
+    my $sign      = $self->sign;
+    my $otherDirection = first { $_ ne $sign } ROLES;
+    if ( not $sign or not defined $difference ) {
+        $sign  = $lastRole;
         $difference = 1;
     }
-    elsif ( $lastRole ne $direction ) {
-        if ( $difference >= 2 ) {
-            $difference = 1;
-        }
-        elsif ( $difference == 1 ) {
-            $difference = 0;
-            $direction  = $otherDirection;
+    elsif ( $lastRole eq $otherDirection ) {
+        if ( $difference > 0 ) {
+            $difference--;
+	    if ( $difference == 0 ) {
+		$sign  = $otherDirection;
+	    }
         }
         elsif ( $difference == 0 ) {
+            $sign  = $lastRole;
             $difference = 1;
-            $direction  = $otherDirection;
-        }
-        elsif ( $direction eq '' ) {
-            $difference = 1;
-            $direction  = $lastRole;
         }
         else {
-            die "$difference game lead as $direction after $lastRole role?";
+            die "$difference games more as $sign after $lastRole role?";
         }
     }
-    elsif ( $lastRole eq $direction ) {
-        if ( $difference == 2 ) {
-            warn "More than 2 games extra as $lastRole";
-        }
-        elsif ( $difference == 1 ) {
-            $difference = 2;
-        }
-        elsif ( $difference == 0 ) {
-            $difference = 1;
-        }
-        else {
-            die "$difference difference for $direction after $lastRole role?";
+    elsif ( $lastRole eq $sign ) {
+	$difference++;
+        if ( $difference > 2 ) {
+            $message .= "$difference games more as $lastRole\n";
         }
     }
     else {
         die
-"$lastRole role update on ${difference}-game difference for $direction role?";
+	"$lastRole role update on ${difference}-game difference in $sign role?";
     }
-    $self->direction($direction);
+    $self->sign($sign);
     $self->difference($difference);
     if ($before) { $self->lastTwo( [ $before, $lastRole ] ); }
     else { $self->lastTwo( [$lastRole] ); }
@@ -130,20 +125,15 @@ sub update {
 
 	$pref->asString
 
-	The difference as a string, ^[+-][012]$. '0' represents a mild preference, '1' a strong one and '2' an absolute one. '-' represents a preference for White, or the first element of @Games::Tournament::Swiss::Config::roles, and '+' represents a preference for Black or the second element.
+	The difference as a string, ^[+-][012]$. '0' represents a mild preference, '1' a strong one and '2' an absolute one. '-' represents a preference for White, or the first element of @Games::Tournament::Swiss::Config::roles, and '+' represents a preference for Black or the second element. A player may have an absolute preference even if the difference is 0, because it played the previous 2 rounds in the other color.
 
 =cut
 
 
 sub asString {
     my $self   = shift;
-    my $string = $self->direction eq (ROLES)[0] ? '-' : '+';
-
-    #my $strength = $self->strength;
-    #$string .= $strength eq 'Mild'? 0:
-    #    	$strength eq 'Strong'? 1:
-    #    	$strength eq 'Absolute'? 2:
-    #    	die "$strength strength for " . $self->role . "preference?";
+    my $string = $self->sign eq (ROLES)[0] ? '+' :
+		$self->sign eq (ROLES)[1] ? '-' : '';
     $string .= $self->difference;
 }
 
@@ -165,19 +155,23 @@ sub difference {
 }
 
 
-=head2 direction
+=head2 sign
 
-	$pref->direction('Black')
+	$pref->sign('Black')
+	$pref->sign('-')
 
 Sets/gets the role which the player has taken more often, or more recently, than other alternative roles. The preference is thus for the other role.
 
 =cut
 
-sub direction {
+sub sign {
     my $self = shift;
-    my $direction = shift() || $self->{direction};
-    $self->{direction} = $direction;
-    return $direction;
+    my $sign = shift() || $self->{sign};
+    my %abbrev = ( White => '+', Black => '-' );
+    my %expando = reverse %abbrev;
+    $sign = $expando{$sign} if $expando{$sign};
+    $self->{sign} = $sign;
+    return $sign;
 }
 
 
@@ -191,9 +185,10 @@ Gets the strength of the preference, 'Mild,' 'Strong,' or 'Absolute.'
 
 sub strength {
     my $self      = shift;
-    my @table     = qw/Mild Strong Absolute/;
+    my @degree     = qw/Mild Strong Absolute/;
     my $diff      = $self->difference;
-    my $strength  = $table[$diff];
+    my $strength  = $degree[$diff];
+    $strength = 'Absolute' if $diff > 2 ;
     my @lastRoles = @{ $self->lastTwo };
     if ( @lastRoles == 2 ) {
         $strength = 'Absolute' if $lastRoles[0] eq $lastRoles[1];
@@ -213,8 +208,12 @@ Gets the role which the preference entitles/requires the player to take in the n
 sub role {
     my $self = shift;
     my $role;
-    $role = ( grep { $_ ne $self->direction } ROLES )[0]
-      if $self->direction;
+    $role = first { $_ ne $self->sign } ROLES if $self->sign;
+    my @lastRoles = @{ $self->lastTwo };
+    if ( @lastRoles == 2 and $lastRoles[0] eq $lastRoles[1] )
+    {
+	$role = first { $_ ne $lastRoles[0] } ROLES;
+    }
     return $role;
 }
 
@@ -239,7 +238,7 @@ sub round {
 
 	$pref->lastTwo
 
-Sets/gets a list of the roles in the last 2 games. If the 2 roles are the same, there is an absolute preference for the other role. (Is that actually the definition of absolute preference?)
+Sets/gets a list of the roles in the last 2 games. If the 2 roles are the same, there is an absolute preference for the other role.
 
 =cut
 

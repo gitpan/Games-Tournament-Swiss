@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Oct 27, 07:35:49 PM
+# Last Edit: 2007 Nov 28, 05:53:32 PM
 # $Id: $
 
 use warnings;
@@ -9,7 +9,9 @@ use Carp;
 
 use Games::Tournament::Swiss::Config;
 
-use constant ROLES      => @Games::Tournament::Swiss::Config::roles;
+use constant ROLES => @Games::Tournament::Swiss::Config::roles?
+			@Games::Tournament::Swiss::Config::roles:
+			Games::Tournament::Swiss::Config->roles;
 use constant FIRSTROUND => $Games::Tournament::Swiss::Config::firstround;
 
 use base qw/Games::Tournament/;
@@ -30,11 +32,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.14
+Version 0.15
 
 =cut
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 =head1 SYNOPSIS
 
@@ -103,9 +105,9 @@ sub initializePreferences {
     $_->preference( Games::Tournament::Contestant::Swiss::Preference->new )
       for @players;
     for my $n ( 0 .. $#players / 4 ) {
-        $players[ 2 * $n ]->preference->direction($evenRole);
+        $players[ 2 * $n ]->preference->sign($evenRole);
         $players[ 2 * $n ]->preference->difference(0);
-        $players[ 2 * $n + 1 ]->preference->direction($oddRole);
+        $players[ 2 * $n + 1 ]->preference->sign($oddRole);
         $players[ 2 * $n + 1 ]->preference->difference(0);
     }
     $self->entrants( \@players );
@@ -154,9 +156,17 @@ sub prepareCards {
 	   unless $opponentId eq 'Bye' or $opponentsOpponent == $id;
        my $role = $roles->{$id};
        my $opponentRole = $roles->{$opponentId};
-       croak
+       if ( $opponentId eq 'Bye' )
+       {
+	   croak "Player $id has $role, in round $round?"
+		unless $player and $role eq 'Bye';
+       }
+       else {
+	   croak
 "Player $id is $role, and opponent $opponentId is $opponentRole, in round $round?"
-	    unless $player and $opponent and $role and $opponentRole;
+		unless $player and $opponent and $role and $opponentRole;
+
+       }
        croak
 "Player $id has same $role role as opponent $opponentId in round $round?" if 
 	    $role eq $opponentRole;
@@ -196,35 +206,46 @@ sub collectCards {
     my $self     = shift;
     my @games    = @_;
     my $play     = $self->play || {};
-    my @entrants = @{ $self->entrants };
-    for my $entrant (@entrants) {
-        my $id       = $entrant->id;
-        my $oldroles = $entrant->roles;
-        my $scores   = $entrant->scores;
-        my $myGame = first { grep { $id == $_->{id} } $_->myPlayers } @games;
-        my $round;
-        my ( $role, $float );
-        if ( $myGame and $myGame->isa("Games::Tournament::Card") ) {
-	    # $myGame->canonize;
-	    $round = $myGame->round;
-            $role             = $myGame->myRole($entrant);
-            $float            = $myGame->myFloat($entrant);
-            $scores->{$round} = $myGame->{result}->{$role};
-#            carp
-#"No result in round $round for player $id, $entrant->{name} as $role"
-#              unless $myGame->{result}->{$role};
-            $play->{$round}->{$id} = $myGame || "No game";
-        }
-        else { carp "Player $id had no game in round $round"; $role = 'None'; }
-        $entrant->scores($scores);
-        croak "No record in round $round for player $id $entrant->{name}"
-          unless $play->{$round}->{$id};
-        $entrant->roles($role);
-        $entrant->floats( $round, $float );
-        $entrant->floating('');
-        $entrant->preference->update( $entrant->roles );
+    # my @entrants = @{ $self->entrants };
+    my %games;
+    for my $game ( @games )
+    {
+	my $round = $game->round;
+	carp "round $round is not a number." unless $round =~ m/^\d+$/;
+	push @{ $games{$round} }, $game;
     }
-    $self->entrants( \@entrants );
+    for my $round ( sort { $a <=> $b } keys %games )
+    {
+	my $games =  $games{$round}; 
+	for my $game ( @$games ) {
+	    my @players = $game->myPlayers;
+	    for my $player ( @players ) {
+		my $id       = $player->id;
+		# my $entrant = first { $_->id eq $id } @entrants;
+		my $entrant = $self->ided($id);
+		my $oldroles = $player->roles;
+		my $scores   = $player->scores;
+		my ( $role, $float );
+		# $myGame->canonize;
+		$role             = $game->myRole($player);
+		$float            = $game->myFloat($player);
+		$scores->{$round} = $role eq 'Bye'? 'Bye': $game->{result}->{$role};
+  #              carp
+  #  "No result on card for player $id as $role in round $round "
+  #                unless $game->{result}->{$role};
+		$game ||= "No game";
+		$play->{$round}->{$id} = $game;
+		$entrant->play( { $round => $game } );
+		$entrant->scores($scores);
+		carp "No record in round $round for player $id $player->{name}"
+		  unless $play->{$round}->{$id};
+		$entrant->roles($role);
+		$entrant->floats( $round, $float );
+		$entrant->floating('');
+		$entrant->preference->update( $entrant->roles );
+	    }
+	}
+    }
     $self->play($play);
 }
 
@@ -404,7 +425,7 @@ sub whoPlayedWho {
                     $dupes->{$id}->{ $opponent->id } = $round;
                 }
             }
-	    else { warn "Player ${id}'s game in round $round?"; }
+	    else { warn "Who played Player ${id} in round $round?"; }
         }
     }
     return $dupes;
@@ -470,7 +491,7 @@ sub byesGone {
                     $byes->{$id} = $round;
                 }
             }
-            else { warn "Player ${id}'s game in round $round?"; }
+            else { warn "Player ${id} had Bye in round $round?"; }
         }
     }
     return $byes;

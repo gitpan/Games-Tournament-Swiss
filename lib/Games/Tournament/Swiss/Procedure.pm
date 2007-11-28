@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Procedure;
 
-# Last Edit: 2007 Oct 06, 09:37:19 AM
+# Last Edit: 2007 Nov 28, 07:36:56 AM
 # $Id: $
 
 use warnings;
@@ -17,11 +17,11 @@ Games::Tournament::Swiss::Procedure - A wrapper around a swiss pairing algorithm
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
