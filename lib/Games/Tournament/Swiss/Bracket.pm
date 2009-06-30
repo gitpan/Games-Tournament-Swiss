@@ -973,7 +973,7 @@ sub score {
 
 	$group->number
 
-Gets/sets the bracket's number, a number from 1 to the number of brackets in the tournament. Don't use this number for anything important.
+Gets/sets the bracket's number, a number from 1 to the number of separate brackets, remainder groups and bye groups in the tournament. Don't use this number for anything important.
 
 =cut
 
@@ -1040,7 +1040,7 @@ sub c8swapper {
 
         %b65TestResults = _floatCheck( \@testee, $checkLevels );
 
-Takes a list representing the pairing of a bracket (see the description for _getNonPaired), and the various up- and down-float check levels. Returns an anonymous hash keyed on 'badpos', the first element of the list responsible for violation of B6 or 5, if there was a violation of any of the levels, 'passer', an anonymous array of the same form as \@testee, if there was no violation of any of the levels, and 'message', a string noting the reason why the pairing is in violation of B6 or 5, and the id of the player involved. If there are multiple violations, the most important one is/should be returned. 
+Takes a list representing the pairing of a bracket (see the description for _getNonPaired), and the various up- and down-float check levels. Returns an anonymous hash with keys: (a) 'badpos', the first element of the list responsible for violation of B6 or 5, if there was a violation of any of the levels, (b) 'passer', an anonymous array of the same form as \@testee, if there was no violation of any of the levels, and (c) 'message', a string noting the reason why the pairing is in violation of B6 or 5, and the id of the player involved. If there are multiple violations, the most important one is/should be returned. 
 
 =cut
 

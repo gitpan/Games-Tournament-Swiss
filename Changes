@@ -1,4 +1,12 @@
 ---
+version: 0.16
+date: 二  6月 30 13:40:45 CST 2009
+revision: about 1700
+changes:
+  - rt 47450 E5 A7c S2 bug: players were being assigned preferences
+  - t/initializePreferences.t regression test
+
+---
 version: 0.15
 date: Nov 28, 2007
 revision: about 1645

@@ -1687,6 +1687,11 @@ sub brackets {
 
 Gets an array of homogeneous and heterogeneous brackets in order with remainder groups (iff they have been given bracket status and only until this status is withdrawn) coming after the heterogeneous groups from which they are formed. This ordered array is necessary, because remainder groups come into being and it is difficult to move back to them. Do we re-pair the remainder group, or the whole group from which it came? Remember to keep control of remainder groups' virtual bracket status with the dissolved field. This method depends on each bracket having an index made up of the bracket score and a 'Remainder' or other appropriate suffix, if it is a remainder or other kind of sub-bracket. We rely on the lexico ordering of the suffixes.
 
+TODO No need to create scoresAndTags list of lists here. Just do 
+    @index{@indexes} = map {  m/^(\d*\.?\d+)(\D.*)?$/;
+		{score => $1, tag => $2||'' }
+		} @indexes;
+
 =cut
 
 sub bracketOrder {

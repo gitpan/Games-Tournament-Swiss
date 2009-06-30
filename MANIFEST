@@ -31,6 +31,7 @@ t/c8iterator.t
 t/cc6619.t
 t/cc6619_2.t
 t/dummy10.t
+t/initializePreferences.t
 t/four.t
 t/foura.t
 t/median.t

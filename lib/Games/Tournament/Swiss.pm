@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2007 Nov 28, 05:53:32 PM
+# Last Edit: 2009  6月 30, 13時39分10秒
 # $Id: $
 
 use warnings;
@@ -32,11 +32,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.15
+Version 0.16
 
 =cut
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 =head1 SYNOPSIS
 
@@ -94,7 +94,7 @@ sub assignPairingNumbers {
 
  @rankings = $tourney->initializePreferences;
 
-Before the first round, the color (role) preference of the highest ranked player and the other odd-numbered players in the top half of the rankings is determined by lot. The preference of the even-numbered players in the top half is given to the other color.  E5
+Before the first round, the color (role) preference of the highest ranked player and the other odd-numbered players in the top half of the rankings is determined by lot. The preference of the even-numbered players in the top half is given to the other color. If there is only one player in the tournament, the preference is not defined. E5
 
 =cut
 
@@ -104,11 +104,19 @@ sub initializePreferences {
     my ( $evenRole, $oddRole ) = $self->randomRole;
     $_->preference( Games::Tournament::Contestant::Swiss::Preference->new )
       for @players;
-    for my $n ( 0 .. $#players / 4 ) {
-        $players[ 2 * $n ]->preference->sign($evenRole);
-        $players[ 2 * $n ]->preference->difference(0);
-        $players[ 2 * $n + 1 ]->preference->sign($oddRole);
-        $players[ 2 * $n + 1 ]->preference->difference(0);
+    my $p = int( @players / 2 );
+    if ( $p == 0 ) {
+        $players[ 0 ]->preference->sign('');
+        $players[ 0 ]->preference->difference(0);
+	return $self->entrants( \@players );
+    }
+    for ( my $n=0; $n <= $p-1; $n+=2 ) {
+        $players[ $n ]->preference->sign($evenRole);
+        $players[ $n ]->preference->difference(0);
+    }
+    for ( my $n=1; $n <= $p-1; $n+=2 ) {
+        $players[ $n ]->preference->sign($oddRole);
+        $players[ $n ]->preference->difference(0);
     }
     $self->entrants( \@players );
 }
