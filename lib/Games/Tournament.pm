@@ -1,6 +1,6 @@
 package Games::Tournament;
 
-# Last Edit: 2007 Nov 28, 07:32:56 AM
+# Last Edit: 2009  7月 23, 10時15分54秒
 # $Id: $
 
 use warnings;
@@ -8,7 +8,8 @@ use strict;
 use Carp;
 
 use List::Util qw/first/;
-use List::MoreUtils qw/all/;
+use List::MoreUtils qw/any all/;
+use Scalar::Util qw/looks_like_number/;
 
 use Games::Tournament::Swiss::Config;
 use constant ROLES => @Games::Tournament::Swiss::Config::roles?
@@ -46,16 +47,51 @@ In a tournament, there are contestants, and matches over rounds between the cont
 
  Games::Tournament->new( rounds => 2, entrants => [ $a, $b, $c ] )
 
-Creates a competition for entrants, over a number of rounds. entrants is a list of player objects.
+Creates a competition for entrants, over a number of rounds. entrants is a list of player objects. Enters (see enter method) each of the entrants in the tournament.
 
 =cut 
 
 sub new {
     my $self = shift;
     my %args = @_;
-    return bless \%args, $self;
+    my $entrants = $args{entrants};
+    delete $args{entrants};
+    my $object = bless \%args, $self;
+    for my $entrant ( @$entrants ) { $object->enter( $entrant ); }
+    return $object;
 }
 
+
+=head2 enter
+
+ $tourney->enter($player)
+
+Enters a Games::Tournament::Contestant player object with a rating, title id, and name in the entrants of the tournament. Die if no name or id. We are authoritarians. Warn if no rating defined. No check for duplicate ids. Set this round as their first round, unless they already entered in an earlier round (But did they play in that round?)
+
+=cut
+
+sub enter {
+    my $self    = shift;
+    my $player = shift;
+    my $round = $self->round;
+    die "Player " . $player->id . " entering in Round $round + 1?" unless
+			looks_like_number($round);
+    $player->firstround($round+1) unless $player->firstround;
+    my $entrants = $self->entrants;
+    for my $required ( qw/id name/ ) {
+	unless ( $player->$required ) {
+	    croak "No $required for player " . $player->id;
+	}
+    }
+    for my $recommended ( qw/rating/ ) {
+	unless ( defined $player->$recommended ) {
+	    carp "No $recommended for player " . $player->id;
+	    $player->$recommended( 'None' );
+	}
+    }
+    push @$entrants, $player;
+    $self->entrants( $entrants );
+}
 
 =head2 rank
 
@@ -314,29 +350,6 @@ sub updateScores {
 }
 
 
-#=head2 round
-#
-# $group = $tourney->round
-#
-#Returns the present round, ie the first round for which one or more players does not have a result, minus 1. The conservative approach.
-#
-#=cut
-#
-#sub round {
-#    # my $self = shift;
-#    my $players = $self->entrants;
-#    my $rounds  = $self->rounds;
-#    my $play    = $self->play;
-#    my $round   = min map {
-#        my $n = 1;
-#        $n++ while exists $play->{$n}
-#          and $play->{$n}->{ $_->id };
-#        $n - 1;
-#    } @$players;
-#    return $round;
-#}
-
-
 =head2 randomRole
 
  ( $myrole, $yourrole ) = randomRole;
@@ -388,7 +401,7 @@ sub entrants {
 
 	$tourney->round
 
-Gets/sets the round number of a round near you.
+Gets/sets the round number of a round near you. The default round number is 0. That is, the 'round' before round 1. The question is when one round becomes the next round.
 
 =cut
 
@@ -397,6 +410,7 @@ sub round {
     my $round = shift;
     if ( defined $round ) { $self->{round} = $round; }
     elsif ( $self->{round} ) { return $self->{round}; }
+    else { return 0 }
 }
 
 
@@ -442,6 +456,176 @@ sub odd {
     my @n    = @_;
     return @n % 2;
 }
+
+
+=head2 clearLog
+
+	$pairing->clearLog(qw/C10 C11/)
+
+Discards the logged messages for the passed procedures.
+
+=cut
+
+sub clearLog {
+    my $self = shift;
+    my @states = @_;
+    my $log = $self->{log};
+    delete $log->{$_} for @states;
+    return;
+}
+
+
+=head2 catLog
+
+	$pairing->catLog(qw/C10 C11/)
+
+Returns the messages logged for the passed procedures, or all logged procedures if no procedures are passed, as a hash keyed on the procedures. If no messages were logged, because the procedures were not loggedProcedures, no messages will be returned.
+
+=cut
+
+sub catLog {
+    my $self = shift;
+    my @states = @_;
+    @states = $self->loggedProcedures unless @states;
+    my $log = $self->{log};
+    my %report = map {	my $report = $log->{$_}->{strings};
+			$_ => join '', @$report if $report and
+			    ref $report eq 'ARRAY' } @states;
+    return %report;
+}
+
+
+=head2 tailLog
+
+	$pairing->tailLog(qw/C10 C11/)
+
+Returns the new messages logged for the passed procedures since they were last tailed, as a hash keyed on the procedures. If no messages were logged, because the procedures were not loggedProcedures, no messages will be returned.
+
+=cut
+
+sub tailLog {
+    my $self = shift;
+    my @states = @_;
+    @states = $self->loggedProcedures unless @states;
+    my $log = $self->{log};
+    my %report = map { $_ => $log->{$_}->{strings} } @states;
+    my %tailpos = map { $_ => $log->{$_}->{tailpos} } @states;
+    my (%newpos, %lastpos, %tailedReport);
+    for my $state ( @states )
+    {
+	if ( defined $tailpos{$state} )
+	{
+	    $newpos{$state} = $tailpos{$state} + 1;
+	    $lastpos{$state} = $#{ $report{$state} };
+	    $tailedReport{$state} = join '',
+		@{$report{$state}}[ $newpos{$state}..$lastpos{$state} ];
+	    $log->{$_}->{tailpos} = $lastpos{$_} for @states;
+	}
+	elsif ( $report{$state} ) {
+	    $newpos{$state} = 0;
+	    $lastpos{$state} = $#{ $report{$state} };
+	    $tailedReport{$state} = join '',
+		@{$report{$state}}[ $newpos{$state}..$lastpos{$state} ];
+	    $log->{$_}->{tailpos} = $lastpos{$_} for @states;
+	}
+    }
+    return %tailedReport;
+}
+
+
+=head2 log
+
+	$pairing->log('x=p=1, no more x increases in Bracket 4 (2).')
+
+Saves the message in a log iff this procedure is logged.
+
+=cut
+
+sub log {
+    my $self = shift;
+    my $message = shift;
+    return unless $message;
+    (my $method = uc((caller 1)[3])) =~ s/^.*::(\w+)$/$1/;
+    my @loggable = $self->loggedProcedures;
+    push @{ $self->{log}->{$method}->{strings} }, "\t$message\n" if
+		    any { $_ eq $method } @loggable;
+    return;
+}
+
+
+=head2 loggedProcedures
+
+	$group->loggedProcedures(qw/C10 C11 C12/)
+	$group->loggedProcedures(qw/C5 C6PAIRS C7 C8/)
+
+Adds messages generated in the procedures named in the argument list to a reportable log. Without an argument returns the logged procedures as an array.
+
+=cut
+
+sub loggedProcedures {
+    my $self = shift;
+    my @states = @_;
+    unless ( @states ) { return keys %{ $self->{logged} }; }
+    my %logged;
+    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 20;
+    for my $state (@states)
+    {   
+	carp "$state is unloggable procedure" if not exists $logged{$state};
+	$self->{logged}->{$state} = 1;
+	# push @{ $self->{log}->{$state}->{strings} }, $state . ",";
+    }
+    return;
+}
+
+
+=head2 loggingAll
+
+	$group->loggingAll
+
+Adds messages generated in all the procedures to a reportable log
+
+=cut
+
+sub loggingAll {
+    my $self = shift;
+    my %logged;
+    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 20;
+    for my $state ( keys %logged )
+    {   
+	# carp "$state is unloggable procedure" if not exists $logged{$state};
+	$self->{logged}->{$state} = 1;
+    }
+    return;
+}
+
+
+=head2 disloggedProcedures
+
+	$group->disloggedProcedures
+	$group->disloggedProcedures(qw/C6PAIRS C7 C8/)
+
+Stops messages generated in the procedures named in the argument list being added to a reportable log. Without an argument stops logging of all procedures.
+
+=cut
+
+sub disloggedProcedures {
+    my $self = shift;
+    my @states = @_;
+    unless ( @states )
+    {
+	my @methods = keys %{ $self->{logged} };
+	@{$self->{logged}}{@methods} = (0) x @methods;
+    }
+    my %logged;
+    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 20;
+    for my $state (@states)
+    {   
+	carp "$state is unloggable procedure" if not defined $logged{$state};
+	$self->{logged}->{$state} = 0;
+    }
+    return;
+}
+
 
 =head1 AUTHOR
 

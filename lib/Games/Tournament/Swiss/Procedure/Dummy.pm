@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Procedure::Dummy;
 
-# Last Edit: 2007 Nov 28, 07:37:08 AM
+# Last Edit: 2009  7月 06, 16時20分56秒
 # $Id: $
 
 use warnings;
@@ -55,7 +55,7 @@ sub new {
     for my $bracket ( reverse sort keys %$brackets ) {
         my $members = $brackets->{$bracket}->members;
         my $score   = $brackets->{$bracket}->score;
-        $banner .= "@{[map { $_->id } @$members]} ($score), ";
+        $banner .= "@{[map { $_->pairingNumber } @$members]} ($score), ";
     }
     print $banner . "\n";
     return bless {

@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss;
 
-# Last Edit: 2007 Nov 28, 07:36:32 AM
+# Last Edit: 2009  7月 21, 11時20分09秒
 # $Id: $
 
 use warnings;
@@ -42,7 +42,7 @@ Games::Tournament::Swiss will use this class when constructing a 'Bye' contestan
 	    floats => [qw/Not Down Not Not],
 	    roles => [qw/Black White Black White/] );
 
-Actually, you don't want to assign pairing numbers this way. Let the assignPairingNumbers method in Games::Tournament::Swiss do it.
+Actually, you don't want to assign pairing numbers this way. Let the assignPairingNumbers method in Games::Tournament::Swiss do it. The player gets a default mild preference for neither role.
 
 =cut
 
@@ -50,7 +50,10 @@ sub new() {
     my $self = shift;
     my %args = @_;
     # $args{roles} = [] unless $args{roles};
-    return bless \%args, $self;
+    my $object = bless \%args, $self;
+    $object->preference(
+	Games::Tournament::Contestant::Swiss::Preference->new );
+    return $object;
 }
 
 
@@ -89,7 +92,7 @@ sub pairingNumber {
 
 	$member->oldId
 
-Sets/gets an original, possibly unreliable id of the contestant, supplied before the Games::Tournament::Swiss::assignPairingNumbers function/method is applied, and the result substituted for it.
+Sets/gets an original, possibly unreliable id of the contestant, supplied by the user.
 
 =cut
 
@@ -105,7 +108,7 @@ sub oldId {
 	$member->opponents( 0, 5, 11 )
 	$rolehistory = $member->opponents
 
-If ids (ie pairing numbers) are passed, adds them to the end of the list representing the latest opponents that $member has had in this tournament. (Normally one and only one parameter, the pairing number of the opponent in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, pass 0, 'Bye' or 'Absence'.
+If ids are passed, adds them to the end of the list representing the latest opponents that $member has had in this tournament. (Normally one and only one parameter, the id of the opponent in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, or was unpaired, pass 'Bye' or 'Absence' or 'Unpaired'.
 
 =cut
 
@@ -123,7 +126,7 @@ sub opponents {
 	$member->roles( 'Black' )
 	$rolehistory = $member->roles
 
-If parameters are passed, adds them to the end of the list representing the latest roles that $member has had in this tournament. (Normally one and only one parameter, the role in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, pass 'Not'.
+If parameters are passed, adds them to the end of the list representing the latest roles that $member has had in this tournament. (Normally one and only one parameter, the role in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or even if they had a game but didn't play it, that is, if they had a bye, or an absence, or were unpaired, pass 'Bye', or 'Absence', or 'Unpaired.' F2,3
 
 =cut
 

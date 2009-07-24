@@ -30,7 +30,8 @@ EOT
 
 $table > io('pairtable.txt');
 
-system("$secure_perl_path ./script_files/pairtable2yaml pairtable.txt");
+system(
+"$secure_perl_path ./script_files/pairtable2yaml pairtable.txt > pairtable.yaml"); 
 
 my $yaml = LoadFile './pairtable.yaml';
 

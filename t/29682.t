@@ -143,7 +143,7 @@ for my $round ( 1..$lastround )
     my %floats = ($round >= $lastround-1)?
 	map { $_ => $floats->{$_}->[$round-$lastround-1] } @ids:
 	undef;
-    my @games = $tourney->prepareCards( {
+    my @games = $tourney->recreateCards( {
        round => $round, opponents => \%opponents,
 	roles => \%roles, floats => \%floats } );
    $tourney->collectCards( @games );

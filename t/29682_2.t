@@ -145,7 +145,7 @@ my $runRound = sub {
 	my $id = $player->id;
 	$player->score( $score->{$id}->[$round-1] );
     }
-    my @games = $tourney->prepareCards( {
+    my @games = $tourney->recreateCards( {
        round => $round, opponents => \%opponents,
 	roles => \%roles, floats => \%floats } );
    $tourney->collectCards( @games );

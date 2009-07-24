@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss::Config;
 
-# Last Edit: 2007 Nov 28, 07:36:53 AM
+# Last Edit: 2009  7月 03, 13時44分26秒
 # $Id: $
 
 use warnings;
@@ -144,6 +144,7 @@ sub algorithm {
       unless $algorithm =~ m/^Games::Tournament::Swiss::Procedure::\w+$/;
     if ($algorithm) { $self->{algorithm} = $algorithm; }
     elsif ( $self->{algorithm} ) { return @{ $self->{algorithm} }; }
+    else { return 'Games::Tournament::Swiss::Procedure::FIDE' };
 }
 
 

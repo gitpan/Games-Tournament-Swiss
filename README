@@ -1,10 +1,9 @@
 Games-Tournament-Swiss
 
-Version 0.15
+Version 0.17
 
-The complexity of the C11 code slowed this release down. C12 code wasn't touched, so I'm sure bugs remain. Cross your fingers that your tournament does not exercise the C12 code!
 
-This is a major revision. In addition, we have a nicer interface to writing pairing tests. Look at three.t in the t/ directory.
+This is a major revision. Late entries are now possible. Next is handling absentees.
 
 Warning!
 
@@ -70,6 +69,9 @@ member:
     title: Unknown
 
 If you are using your own scoring scheme, and colors (called, roles), see the example below. You can add your own data to the member records. A pairing number is generated for the players, so don't add a pairing number.
+
+Late entries in a round after the first get their own "late" records, of the same form as the member records.
+
 TODO Configuration of your own scoring scheme looks like it is broken.
 
 The score files: 1.yaml, etc, are of the form:
@@ -86,6 +88,8 @@ Alternatively,
   - 'Sampras, Pete': 1
 2: 
   - 'McEnroe, John': -
+
+A template file is generated in the rounds subdirectory.
 
 A sample scoring scheme, abbreviations and roles in league.yaml could be:
 
@@ -107,7 +111,7 @@ For the form of the pairing table and its YAML equivalent, see the documentation
 
 GENERATING PAIRINGS
 
-Starting with an empty main directory, create league.yaml, and an empty subdirectory for the first round. Run the script, 'pair' in the empty round subdirectory. A log of the pairing is printed and 'round.yaml' in the directory contains the matches. After the games in the round are complete, in the scores subdirectory, enter the scores for the players in the file, '1.yaml', or whatever the round is. Then you can run 'crosstable 1' or 'pairingtable 1' in the original directory above the subdirectory, to get current standings. Convert your pairing table into YAML form with 'pairtable2yaml' and copy it into a subdirectory for the next round, and continue as before.
+Starting with an empty main directory, create league.yaml, and an empty subdirectory for the first round. Run the script, 'pair' in the empty round subdirectory. A log of the pairing is printed and 'round.yaml' in the directory contains the matches. After the games in the round are complete, in the scores subdirectory, enter the scores for the players in the file, '1.yaml', or whatever the round is. You can use the file called 1.yaml, or whatever in the round subdirectory as a template and afterward move it to the scores subdirectory. Then you can run 'crosstable 1' or 'pairingtable 1' in the original directory above the subdirectory, to get current standings. Convert your pairing table into YAML form with 'pairtable2yaml' and copy it into a subdirectory for the next round, and continue as before.
 
 SUPPORT AND DOCUMENTATION
 
@@ -131,7 +135,7 @@ You can also look for information at:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007 Dr Bean
+Copyright (C) 2007-9 Dr Bean
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -83,8 +83,8 @@ sub round
 		my $bracket = $brackets->{$key};
 		for my $game ( @$bracket )
 		{
-			my $contestants = $game->contestants;
-			my @ids = map { $contestants->{$_}->id } @roles;
+			my $players = $game->contestants;
+			my @ids = map { $players->{$_}->pairingNumber } @roles;
 			push @{$tables{$key}}, \@ids;
 		}
 	}

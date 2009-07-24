@@ -16,6 +16,7 @@ use strict;
 use warnings;
 
 use YAML qw/LoadFile DumpFile/;
+use List::Util qw/first/;
 use List::MoreUtils qw/all/;
 
 use Games::Tournament::Swiss::Config;
@@ -23,7 +24,6 @@ use Games::Tournament::Swiss::Config;
 my $swiss = Games::Tournament::Swiss::Config->new;
 
 my $league = LoadFile "./league.yaml";
-die 'round.yaml already exists' if -e 'round.yaml';
 my $roles = $league->{roles} || [qw/White Black/];
 my $scores = $league->{scores} ||
 	{ win => 1, loss => 0, draw => 0.5, absent => 0, bye => 1 };
@@ -45,13 +45,18 @@ require Games::Tournament::Contestant::Swiss;
 require Games::Tournament::Card;
 
 my $tourney;
-my $table;
-my $players;
+my $lineup;
 my $games;
 
-## Make it possible to pass round number as an argument to this script.
-## If no argument is given then number of current round is computed 
-## by looking what's the last score file.
+my @absentees = @{ $league->{absent} } if $league->{absent};
+for my $member ( @{ $league->{member} } ) {
+    next if grep {$member->{name} eq $_} @absentees;
+    push @$lineup, Games::Tournament::Contestant::Swiss->new( %$member );
+}
+
+$tourney = Games::Tournament::Swiss->new(
+		entrants => $lineup );
+$tourney->assignPairingNumbers;
 
 my @rounds;
 if (($ARGV[0]) and ($ARGV[0] =~ /^\d+$/)) {
@@ -63,76 +68,82 @@ if (($ARGV[0]) and ($ARGV[0] =~ /^\d+$/)) {
     }
 }
 
+my $table;
 for my $round ( @rounds )
 {
     next unless glob( "./$round/*" );
-	$tourney = LoadFile "./$round/tourney.yaml";
-	$players = LoadFile qq{./$round/player.yaml};
-	$games = LoadFile "./$round/matches.yaml";
-	if ($tourney->unmarkedCards(@$games))
-	{
-		my $results = LoadFile( "./scores/$round.yaml" );
-    my @tables;
-    if ( @tables = (keys %$results) and all {ref} @{$results}{@tables} ) {
-	for my $table ( @tables ) {
-	    for my $player ( keys %{$results->{$table}} ) {
-		my $result = $results->{$table}->{$player};
-		if ( exists $scores->{$result} )
-		{ $results->{$player} = $result; }
-		elsif ( $abbrev->{$result} )
-		{ $results->{$player} = $abbrev->{$result}; }
-		else { die
-"Player $player on table $table in round $round got $result?";
+    $tourney->round($round);
+    $games = LoadFile "./$round/matches.yaml";
+    if ($tourney->unmarkedCards(@$games)) {
+	my $results = LoadFile( "./scores/$round.yaml" );
+	my @cards;
+	if ( @cards = ( keys %$results ) and
+		all { ref } @{$results}{@cards} ) {
+	    for my $card (@cards) {
+		for my $player ( keys %{ $results->{$card} } ) {
+		    my $result = $results->{$card}->{$player};
+		    if ( exists $scores->{lc $result} ) {
+			$results->{$player} = $result;
+		    }
+		    elsif ( $abbrev->{$result} ) {
+			$results->{$player} = $abbrev->{$result};
+		    }
+		    else {
+			die
+		"Player $player on table $card in round $round got $result?";
+		    }
 		}
 	    }
 	}
+	for my $game (@$games) {
+	    my ( %score, %result );
+	    my $total;
+	    my @contestants = $game->myPlayers;
+	    for my $contestant (@contestants) {
+		my $role = $game->myRole( $contestant );
+		my $result = $results->{ $contestant->name };
+		warn "$contestant->{name} got $result in round $game->{round}"
+		  unless defined $result;
+		$result{$role} = $result;
+		$score{$role} =
+		    $role   =~ m/Bye/i    ? $scores->{bye}
+		  : $result =~ m/Win/i    ? $scores->{win}
+		  : $result =~ m/Draw/i   ? $scores->{draw}
+		  : $result =~ m/Loss/i   ? $scores->{loss}
+		  : $result =~ m/Absent/i ? $scores->{absent}
+		  :                         "Error";
+		my $player = first { $_->id eq $contestant->id} @$lineup;
+		$player->{score} = exists $player->{score}?
+			$player->{score} + $score{$role}: $score{$role};
+		$total += $score{$role};
+	    }
+	    die
+	"total scores in round $round game with players @contestants not $total"
+	      unless $total == $scores->{win} + $scores->{loss}
+		  or $total == 2 * $scores->{draw}
+		  or $total == $scores->{draw} + $scores->{absent}
+		  or $total == 2 * $scores->{absent};
+	    $game->result( \%result );
+	}
     }
-		for my $game ( @$games )
-		{
-			my (%score, %result);
-			my $total;
-			my @roles =  keys %{ $game->contestants }; 
-			my @contestants = map {$_->id} values
-							%{$game->{contestants}};
-			for my $role ( @roles )
-			{
-				my $player = $game->contestants->{$role};
-				my $result = $results->{$player->name};
-				warn "$player->{name} got $result in round $game->{round}"
-							unless defined $result;
-				$result{$role} = $result;
-				$score{$role} =
-				    $role =~ m/Bye/i ? $scores->{bye}
-				  : $result =~ m/Win/i ? $scores->{win}
-				  : $result =~ m/Draw/i ? $scores->{draw}
-				  : $result =~ m/Loss/i ? $scores->{loss}
-				  : $result =~ m/Absent/i ? $scores->{absent}
-				  : "Error";
-				$total += $score{$role};
-			}
-			die "total scores in round $round game with players @contestants not $total"
-			unless $total == $scores->{win} + $scores->{loss} or 
-			$total == 2 * $scores->{draw} or
-			$total == $scores->{draw} + $scores->{absent} or
-			$total == 2 * $scores->{absent};
-			$game->result( \%result );
-		}
+    for my $player (@$lineup) {
+        my $id = $player->id;
+        $table->{$id}->{id} = $id;
+        my $game = $player->findCard(@$games);
+        if ( defined $game ) {
+            my $opponent = $player->myOpponent($game)
+              || Games::Tournament::Contestant->new( name => "Bye", id => "-" );
+            $table->{$id}->{opponents} .= $opponent->id . ",";
+            my $role = $game->myRole($player);
+            if ( $role eq 'Bye' ) { $role = '-'; }
+            else                  { $role =~ s/^(.).*$/$1/; }
+            $table->{$id}->{roles} .= $role;
+        }
+        else {
+            $table->{$id}->{opponents} .= "-,";
+            $table->{$id}->{roles} .= "-";
 	}
-	$tourney->collectCards(@$games);
-	# $tourney->updateScores($round);
-	for my $player ( @$players )
-	{
-		my $id = $player->id;
-		$table->{$id}->{id} = $id;
-		my $game = $player->findCard( @$games );
-		my $opponent = $player->myOpponent($game) || 
-			Games::Tournament::Contestant->new(name=>"Bye",id=>"-");
-		$table->{$id}->{opponents} .= $opponent->id . ",";
-		my $role = $game->myRole($player);
-		if ( $role eq 'Bye' ) { $role = '-'; }
-		else { $role =~ s/^(.).*$/$1/; }
-		$table->{$id}->{roles} .= $role;
-	}
+    }
 }
 
 my %brackets = $tourney->formBrackets;
@@ -165,7 +176,7 @@ for my $index ( reverse sort keys %brackets )
 	# no warnings;
 	format STDOUT =
 @<<<<< @<< @<<<<<<<<<<<<< @<<<<<<<< @<< @<<<
-"\t", $id,  $table->{$id}->{opponents}, $table->{$id}->{roles}, $float, $member->score
+"\t", $id,  $table->{$id}->{opponents}, $table->{$id}->{roles}, $float, $member->{score}
 .
 	write;
 	# use warnings;

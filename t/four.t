@@ -69,10 +69,10 @@ $t->round(1);
 my @tests = (
 [ $m{0}->[0]->isa('Games::Tournament::Card'),	'$m0 isa'],
 [ $m{0}->[1]->isa('Games::Tournament::Card'),	'$m1 isa'],
-[ $antonio == $m{0}->[0]->contestants->{White},	'$m0 White'],
-[ $bruno == $m{0}->[0]->contestants->{Black},	'$m0 Black'],
-[ $tiago == $m{0}->[1]->contestants->{Black},	'$m1 White'],
-[ $paulo == $m{0}->[1]->contestants->{White},	'$m1 Black'],
+[ $antonio, $m{0}->[0]->contestants->{White},	'$m0 White'],
+[ $bruno, $m{0}->[0]->contestants->{Black},	'$m0 Black'],
+[ $tiago, $m{0}->[1]->contestants->{Black},	'$m1 White'],
+[ $paulo, $m{0}->[1]->contestants->{White},	'$m1 Black'],
 );
 
 my @matches = map { @$_ } values %m;
@@ -90,10 +90,10 @@ $t->round(2);
 push @tests, (
 [ $m2{0.5}->[0]->isa('Games::Tournament::Card'),	'@m2 isa'],
 [ $m2{0.5}->[1]->isa('Games::Tournament::Card'),	'@m2 isa'],
-[ $tiago == $m2{0.5}->[0]->contestants->{White},	'@m2 White0'],
-[ $antonio == $m2{0.5}->[0]->contestants->{Black},	'@m2 Black0'],
-[ $bruno == $m2{0.5}->[1]->contestants->{White},	'@m2 White1'],
-[ $paulo == $m2{0.5}->[1]->contestants->{Black},	'@m2 Black1'],
+[ $tiago, $m2{0.5}->[0]->contestants->{White},	'@m2 White0'],
+[ $antonio, $m2{0.5}->[0]->contestants->{Black},	'@m2 Black0'],
+[ $bruno, $m2{0.5}->[1]->contestants->{White},	'@m2 White1'],
+[ $paulo, $m2{0.5}->[1]->contestants->{Black},	'@m2 Black1'],
 );
 
 my @matches2 = map { @$_ } values %m2;
@@ -111,12 +111,13 @@ $t->round(3);
 push @tests, (
 [ $m3{1}->[0]->isa('Games::Tournament::Card'),	'@m3 isa'],
 [ $m3{1}->[1]->isa('Games::Tournament::Card'),	'@m3 isa'],
-[ $antonio == $m3{1}->[0]->contestants->{White},	'@m3 White0'],
-[ $paulo == $m3{1}->[0]->contestants->{Black},	'@m3 Black0'],
-[ $bruno == $m3{1}->[1]->contestants->{White},	'@m3 White1'],
-[ $tiago == $m3{1}->[1]->contestants->{Black},	'@m3 Black1'],
+[ $antonio, $m3{1}->[0]->contestants->{White},	'@m3 White0'],
+[ $paulo, $m3{1}->[0]->contestants->{Black},	'@m3 Black0'],
+[ $bruno, $m3{1}->[1]->contestants->{White},	'@m3 White1'],
+[ $tiago, $m3{1}->[1]->contestants->{Black},	'@m3 Black1'],
 );
 
 plan tests => $#tests + 1;
 
-ok( $_->[0], $_->[ 1, ], ) for @tests;
+ok( $_->[0], $_->[ 1, ], ) for @tests[0,1,6,7,12,13];
+is_deeply( $_->[0], $_->[ 1, ], $_->[2] ) for @tests[2..5,8..11,14..17];

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Last Edit: 2007 Oct 13, 09:40:34 AM
+# Last Edit: 2009  7月 05, 18時55分08秒
 # $Id: /swiss/trunk/script_files/pairstately 1472 2007-10-13T02:03:22.823448Z greg  $
 
 use strict;
@@ -84,15 +84,7 @@ if ( -e "../$previous/player.yaml" and $round >= $firstround ) {
 	next if grep {$member->{name} eq $_} @absentees;
 	next if $lineup and grep {$_->{name} eq $member->{name}} @$lineup;
 	$newplayers++;
-        push @$lineup, Games::Tournament::Contestant::Swiss->new(
-            oldId     => $member->{id},
-	    pairingNumber => $member->{pairingNumber},
-	    id => $member->{pairingNumber},
-            name   => $member->{name},
-            title  => $member->{title},
-            rating => $member->{rating},
-	    preference => Games::Tournament::Contestant::Swiss::Preference->new
-        );
+        push @$lineup, Games::Tournament::Contestant::Swiss->new( %$member );
     }
 # }
 

@@ -147,7 +147,9 @@ for my $round ( 1..$lastround )
 	my $opponentRole = $roles->{$opponentId}->[$round-1];
 	my $game = Games::Tournament::Card->new(
 	    round => $round,
-	    contestants => { $role => $player, $opponentRole => $opponent} );
+	    contestants => { $role => $player, $opponentRole => $opponent},
+	    # result => { $role => 'Win', $opponentRole => 'Loss' }
+	    );
         if ($round >= $lastround-1)
         {
 	    my $float = $floats->{$id}->[$round-$lastround-1];

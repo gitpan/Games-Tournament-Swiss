@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant::Swiss::Preference;
 
-# Last Edit: 2009  6月 30, 13時38分13秒
+# Last Edit: 2009  7月 13, 18時38分17秒
 # $Id: $
 
 use warnings;
@@ -66,7 +66,7 @@ sub new {
 
 	$pref->update( \@oldRoles  )
 
-	Updates the difference (ie, the internal representation of preference) on the basis of the last role (and second-last role) in \@oldRoles. A minimal sanity check is performed. \@oldRoles is a history of roles in previous rounds, and it is expected only the last role of this history has not yet been used to update the preference. That is, this method must be used round-by-round to keep a players preference up to date. However, the second-last role (in addition to the last role) is also needed to determine the preference in cases when the same role was taken in the last 2 games. (Is this true? $self->sign can be other than the last role?) So for updates after the second round, make sure the history is at least 2 elements long. Byes and absences are passed over.
+	Updates the difference (ie, the internal representation of preference) on the basis of the last role (and second-last role) in \@oldRoles. A minimal sanity check is performed. \@oldRoles is a history of roles in previous rounds, and it is expected only the last role of this history has not yet been used to update the preference. That is, this method must be used round-by-round to keep a players preference up to date. However, the second-last role (in addition to the last role) is also needed to determine the preference in cases when the same role was taken in the last 2 games. So for updates after the second round, make sure the history is at least 2 elements long. Byes and absences have no effect on the preference.
 
 =cut
 

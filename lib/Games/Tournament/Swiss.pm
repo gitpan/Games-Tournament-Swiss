@@ -1,6 +1,6 @@
 package Games::Tournament::Swiss;
 
-# Last Edit: 2009  6月 30, 13時39分10秒
+# Last Edit: 2009  7月 24, 12時45分57秒
 # $Id: $
 
 use warnings;
@@ -24,7 +24,7 @@ use Games::Tournament::Swiss::Procedure;
 use Games::Tournament::Contestant::Swiss::Preference;
 
 use List::Util qw/min reduce sum first/;
-use List::MoreUtils qw/all/;
+use List::MoreUtils qw/any all/;
 
 =head1 NAME
 
@@ -32,11 +32,11 @@ Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing
 
 =head1 VERSION
 
-Version 0.16
+Version 0.17
 
 =cut
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 =head1 SYNOPSIS
 
@@ -64,28 +64,20 @@ In a Swiss tournament, there is a pre-declared number of rounds, each contestant
 
  @rankings = $tourney->assignPairingNumbers;
 
-Sets the participants pairing numbers, sorting on rating, title and name, and substitutes this for the id they had before (The old id is saved as oldId.) If a pairingNumber attribute already exists for all @players, however, this is used instead, and the old id isn't saved. This function uses Games::Tournament::rank. Before the first round, all scores are usually 0. But if they *do* have scores, they are not used to rank. A2
+Sets the participants pairing numbers, sorting on rating, title and name, and substitutes this for the id they had before (The old id is saved as oldId. But don't change id to pairingNumber. It will change with late entries.) This function uses Games::Tournament::rank. Before the first round, all scores are usually 0. A2
 
 =cut
 
 sub assignPairingNumbers {
     my $self    = shift;
-    my @players = @{ $self->{entrants} };
-    if ( @players == grep { $_->{pairingNumber} } @players ) {
-        for (@players) { $_->{id} ||= $_->{pairingNumber}; }
-        return @players;
-    }
-    my @realScores;
-    my $n = 0;
-    for (@players) { $realScores[$n] = $_->scores if defined $_->scores; $n++ }
-    $_->{scores} = undef foreach @players;
+    my @players = @{ $self->entrants };
+    return if all { $_->pairingNumber } @players;
     my @rankings = $self->rank(@players);
-    foreach my $n ( 0 .. $#players ) {
-        $players[$n]->scores( $realScores[$n] );
-        $rankings[$n]->pairingNumber( $n + 1 );
+    foreach my $n ( 0 .. $#rankings ) {
+        $rankings[$n]->pairingNumber( $n+1 );
         $rankings[$n]->oldId( $rankings[$n]->id ) unless $rankings[$n]->oldId;
-        $rankings[$n]->id( $rankings[$n]->pairingNumber );
     }
+    $self->log( join ', ', map { $_->pairingNumber . ": " . $_->id } @rankings);
     $self->entrants( \@rankings );
 }
 
@@ -94,7 +86,7 @@ sub assignPairingNumbers {
 
  @rankings = $tourney->initializePreferences;
 
-Before the first round, the color (role) preference of the highest ranked player and the other odd-numbered players in the top half of the rankings is determined by lot. The preference of the even-numbered players in the top half is given to the other color. If there is only one player in the tournament, the preference is not defined. E5
+Before the first round, the color (role) preference of the highest ranked player and the other odd-numbered players in the top half of the rankings is determined by lot. The preference of the even-numbered players in the top half is given to the other color. If there is only one player in the tournament, the preference is not initialized. The method assumes all entrants have a preference attribute. This accessor is given the player by the Games::Tournament::Contestant::Swiss constructor. E5
 
 =cut
 
@@ -102,8 +94,6 @@ sub initializePreferences {
     my $self    = shift;
     my @players = @{ $self->{entrants} };
     my ( $evenRole, $oddRole ) = $self->randomRole;
-    $_->preference( Games::Tournament::Contestant::Swiss::Preference->new )
-      for @players;
     my $p = int( @players / 2 );
     if ( $p == 0 ) {
         $players[ 0 ]->preference->sign('');
@@ -122,20 +112,20 @@ sub initializePreferences {
 }
 
 
-=head2 prepareCards
+=head2 recreateCards
 
- $tourney->prepareCards( {
+ $tourney->recreateCards( {
      round => $round,
      opponents => { 1 => 2, 2 => 1},
      roles => { 1 => 'W', 2 => 'B' },
      floats => { 1 => 'U', 2=> 'D' }
  } )
 
-From hashes of the opponents, roles and floats for each player in a round, draws up game cards for each of the matches of the round. NOTE: It's all wrapped up in a big anonymous hash. Returned is a list of Games::Tournament::Card objects, with undefined result fields.
+From hashes of the opponents, roles and floats for each player in a round (as provided by a pairing table), draws up the original game cards for each of the matches of the round. Returned is a list of Games::Tournament::Card objects, with undefined result fields. Pairing numbers are not used. Ids are used. Pairing numbers change with late entries.
 
 =cut
 
-sub prepareCards {
+sub recreateCards {
     my $self  = shift;
     my $args    = shift;
     my $round = $args->{round};
@@ -149,53 +139,59 @@ sub prepareCards {
 	$count{$_}++ for @ids, keys %$opponents, keys %$roles, keys %$floats;
 	return all { $count{$_} == 4 } keys %count;
 	    };
-    croak "Players in games different than those in lineup" unless &$test;
+    croak "Not all players have a complete game card in round $round"
+		    unless &$test;
     my (%games, @games);
     for my $id ( @ids )
     {
-       next if $games{$id};
-       my $player = $self->ided($id);
-       my $opponentId = $opponents->{$id};
-       croak "No opponent for Player $id in round $round" unless $opponentId;
-       my $opponent = $self->ided($opponentId);
-       my $opponentsOpponent = $opponents->{$opponentId};
-       croak
-    "Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent is $opponentsOpponent, not $id in round $round"
-	   unless $opponentId eq 'Bye' or $opponentsOpponent == $id;
-       my $role = $roles->{$id};
-       my $opponentRole = $roles->{$opponentId};
-       if ( $opponentId eq 'Bye' )
-       {
-	   croak "Player $id has $role, in round $round?"
-		unless $player and $role eq 'Bye';
-       }
-       else {
-	   croak
-"Player $id is $role, and opponent $opponentId is $opponentRole, in round $round?"
-		unless $player and $opponent and $role and $opponentRole;
+        next if $games{$id};
+        my $player     = $self->ided($id);
+        next if $round < $player->firstround;
+	my $opponentId = $opponents->{$id};
+        croak "Round $round: opponent info for Player $id?" unless $opponentId;
+        my $opponent          = $self->ided($opponentId);
+        my $opponentsOpponent = $opponents->{$opponentId};
+        croak
+"Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent is $opponentsOpponent, not $id in round $round"
+          unless $opponentId eq 'Bye'
+              or $opponentsOpponent eq $id;
+        my $role         = $roles->{$id};
+        my $opponentRole = $roles->{$opponentId};
 
-       }
-       croak
-"Player $id has same $role role as opponent $opponentId in round $round?" if 
-	    $role eq $opponentRole;
-       my $contestants;
-       if ( $opponentId eq 'Bye' ) { $contestants = { Bye => $player } }
-       else { $contestants = { $role=>$player, $opponentRole=>$opponent } }
-	my $game = Games::Tournament::Card->new(
-		    round => $round,
-		    contestants =>  $contestants,
-		    result => undef );
-	my $float = $floats->{$id};
-	$game->float($player, $float);
-	unless ($opponentId eq 'Bye')
-	{
-	    my $opponentFloat =
-			$floats->{$opponentId};
-	    $game->float($opponent, $opponentFloat);
-	}
-	$games{$id} = $game;
-	$games{$opponentId} = $game;
-	push @games, $game;
+        if ( $opponentId eq 'Bye' ) {
+            croak "Player $id has $role, in round $round?"
+              unless $player and $role eq 'Bye';
+        }
+        else {
+            croak
+"Player $id is $role, and opponent $opponentId is $opponentRole, in round $round?"
+              unless $player
+                  and $opponent
+                  and $role
+                  and $opponentRole;
+
+        }
+        croak
+"Player $id has same $role role as opponent $opponentId in round $round?"
+          if $opponentId and defined $opponentRole and $role eq $opponentRole;
+        my $contestants;
+        if ( $opponentId eq 'Bye' ) { $contestants = { Bye => $player } }
+        else { $contestants = { $role => $player, $opponentRole => $opponent } }
+        my $game = Games::Tournament::Card->new(
+            round       => $round,
+            contestants => $contestants,
+            result      => undef
+        );
+        my $float = $floats->{$id};
+        $game->float( $player, $float );
+
+        unless ( $opponentId eq 'Bye' ) {
+            my $opponentFloat = $floats->{$opponentId};
+            $game->float( $opponent, $opponentFloat );
+        }
+        $games{$id}         = $game;
+        $games{$opponentId} = $game;
+        push @games, $game;
     }
     return @games;
 }
@@ -206,7 +202,7 @@ sub prepareCards {
  $play = $tourney->collectCards( @games );
   next if $htable->{$player1->id}->{$player2->id};
 
-Records @games after they have been played. Stored as $tourney's play field, keyed on round and ids of players.  Returns the new play field. Updates player scores, preferences. TODO This has non-Swiss subclass elements I could factor out into a method in Games::Tournament. TODO What if player is matched more than one time in the round, filling in for someone? XXX It looks like all the games have to be the same round, or you have to collect all cards in one round before collecting cards in following rounds. XXX I'm having problems with recording roles. I want to be lazy about it, and trust the card I get back before the next round. The problem with this is, I may be getting the role from the wrong place. It should come from the card, and is a role which was assigned in the previous round, and is only now being recorded, at this point between the previous round and the next round. Or is the problem copying by value rather than reference of the entrants? Now I also need to record floats. It would be good to do this at the same time as I record roles. The card is the appropriate place to get this info according to A4.
+Records @games after they have been played. Stored as $tourney's play field, keyed on round and ids of players.  Returns the new play field. Updates player scores, preferences, unless the player was absent or had a Bye. TODO Die (or warn) if game has no results TODO This has non-Swiss subclass elements I could factor out into a method in Games::Tournament. TODO What if player is matched more than one time in the round, filling in for someone? XXX It looks like all the games have to be the same round, or you have to collect all cards in one round before collecting cards in following rounds. XXX I'm having problems with recording roles. I want to be lazy about it, and trust the card I get back before the next round. The problem with this is, I may be getting the role from the wrong place. It should come from the card, and is a role which was assigned in the previous round, and is only now being recorded, at this point between the previous round and the next round. Or is the problem copying by value rather than reference of the entrants? Now I also need to record floats. It would be good to do this at the same time as I record roles. The card is the appropriate place to get this info according to A4. 
 
 =cut
 
@@ -229,28 +225,29 @@ sub collectCards {
 	    my @players = $game->myPlayers;
 	    for my $player ( @players ) {
 		my $id       = $player->id;
-		# my $entrant = first { $_->id eq $id } @entrants;
 		my $entrant = $self->ided($id);
 		my $oldroles = $player->roles;
 		my $scores   = $player->scores;
 		my ( $role, $float );
-		# $myGame->canonize;
 		$role             = $game->myRole($player);
 		$float            = $game->myFloat($player);
-		$scores->{$round} = $role eq 'Bye'? 'Bye': $game->{result}->{$role};
-  #              carp
-  #  "No result on card for player $id as $role in round $round "
-  #                unless $game->{result}->{$role};
+		$scores->{$round} = $role eq 'Bye'? 'Bye':
+				    $game->{result}->{$role};
+		#carp
+		#  "No result on card for player $id as $role in round $round "
+		#	unless $scores->{$round};
 		$game ||= "No game";
 		$play->{$round}->{$id} = $game;
-		$entrant->play( { $round => $game } );
 		$entrant->scores($scores);
 		carp "No record in round $round for player $id $player->{name}"
 		  unless $play->{$round}->{$id};
-		$entrant->roles($role);
+		$entrant->roles($role) unless $scores->{round} and
+			$scores->{$round} eq 'Bye'||'Absent';
 		$entrant->floats( $round, $float );
 		$entrant->floating('');
-		$entrant->preference->update( $entrant->roles );
+		$entrant->preference->update( $entrant->roles ) unless
+		    $scores->{round} and $scores->{$round} eq 'Bye'||'Absent';
+;
 	    }
 	}
     }
@@ -374,7 +371,7 @@ sub pairing {
 	$games = $tourney->compatible
 	next if $games->{$alekhine->pairingNumber}->{$capablanca->pairingNumber}
 
-Returns an anonymous hash, keyed on the pairing numbers (ids) of @grandmasters, indicating whether or not the individual @grandmasters could play each other in the next round. But what is the next round? This method uses the whoPlayedWho and colorClashes methods to remove incompatible players.
+Returns an anonymous hash, keyed on the ids of @grandmasters, indicating whether or not the individual @grandmasters could play each other in the next round. But what is the next round? This method uses the whoPlayedWho and colorClashes methods to remove incompatible players.
 
 =cut
 
@@ -404,7 +401,7 @@ sub compatible {
 	next if $games->{$alekhine->pairingNumber}->
 	    {$capablanca->pairingNumber}
 
-Returns an anonymous hash, keyed on the pairing numbers (ids) of the tourney's entrants, of the round in which individual entrants met. Don't forget to collect scorecards in the appropriate games first! (No tracking of how many times players have met if they have met more than once!) Do you know what round it is? B1
+Returns an anonymous hash, keyed on the ids of the tourney's entrants, of the round in which individual entrants met. Don't forget to collect scorecards in the appropriate games first! (No tracking of how many times players have met if they have met more than once!) Do you know what round it is? B1 XXX Unplayed pairings are not considered illegal in future rounds. F2 
 
 =cut
 
@@ -422,18 +419,21 @@ sub whoPlayedWho {
               unless $player;
             my $game = $play->{$round}->{$id};
             if ( $game and $game->can("myRole") ) {
+		next if $game->result and $game->result eq 'Bye';
                 my $role = $game->myRole($player);
                 die "Player $id, $player->{name}'s role is $role of " . ROLES
                   . " in round $round?"
-                  unless grep { $_ eq $role } ROLES, 'Bye';
-                my ( $otherRole, $opponent );
-                if ( grep { $role eq $_ } ROLES ) {
-                    $otherRole = ( grep { $role ne $_ } ROLES )[0];
-                    $opponent = $game->contestants->{$otherRole};
+                  unless any { $_ eq $role } ROLES, 'Bye';
+		next if $game->result and exists $game->result->{$role} and
+			$game->result->{$role} eq 'Absent';
+                if ( any { $role eq $_ } ROLES ) {
+                    my $otherRole = first { $role ne $_ } ROLES;
+                    my $opponent = $game->contestants->{$otherRole};
                     $dupes->{$id}->{ $opponent->id } = $round;
                 }
             }
-	    else { warn "Who played Player ${id} in round $round?"; }
+	    elsif ( $player->firstround > $round ) { next }
+            else { warn "Player ${id} game in round $round?"; }
         }
     }
     return $dupes;
@@ -445,7 +445,7 @@ sub whoPlayedWho {
 	$nomatch = $tourney->colorClashes
 	next if $nomatch->{$alekhine->id}->{$capablanca->id}
 
-Returns an anonymous hash, keyed on the ids/pairing numbers of the tourney's entrants, of a color (role) if 2 of the individual @grandmasters both have an absolute preference for it in the next round and so can't play each other (themselves). Don't forget to collect scorecards in the appropriate games first! B2
+Returns an anonymous hash, keyed on the ids of the tourney's entrants, of a color (role) if 2 of the individual @grandmasters both have an absolute preference for it in the next round and so can't play each other (themselves). Don't forget to collect scorecards in the appropriate games first! B2
 
 =cut
 
@@ -499,6 +499,7 @@ sub byesGone {
                     $byes->{$id} = $round;
                 }
             }
+	    elsif ( $player->firstround > $round ) { next }
             else { warn "Player ${id} had Bye in round $round?"; }
         }
     }
@@ -510,7 +511,7 @@ sub byesGone {
 	$nomatch = $tourney->incompatibles(@grandmasters)
 	next if $nomatch->{$alekhine->id}->{$capablanca->id}
 
-Collates information from the whoPlayedWho and colorClashes methods to show who cannot be matched or given a bye in the next round, returning an anonymous hash keyed on the ids/pairing numbers of @grandmasters. B1,2 C1,6
+Collates information from the whoPlayedWho and colorClashes methods to show who cannot be matched or given a bye in the next round, returning an anonymous hash keyed on the ids of @grandmasters. B1,2 C1,6
 
 =cut
 

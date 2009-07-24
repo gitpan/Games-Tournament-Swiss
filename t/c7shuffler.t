@@ -20,25 +20,29 @@ use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Swiss::Bracket;
 
 my $one = Games::Tournament::Contestant::Swiss->new(
-    id => 1, name => 'Ray', title  => 'Expert', rating => 100,);
+    pairingNumber => 1, name => 'Ray', title  => 'Expert', rating => 100,);
 my $two = Games::Tournament::Contestant::Swiss->new(
-    id => 2, name => 'Red', title  => 'Expert', rating => 80,);
+    pairingNumber => 2, name => 'Red', title  => 'Expert', rating => 80,);
 my $three = Games::Tournament::Contestant::Swiss->new(
-    id => 3, name => 'Reg', score  => 0, title  => 'Expert', rating => '50',);
+    pairingNumber => 3, name => 'Reg', score => 0, title  => 'Expert',
+    rating => '50',);
 my $four = Games::Tournament::Contestant::Swiss->new(
-    id => 4, name   => 'Rob', title  => 'Novice', rating => 25,);
+    pairingNumber => 4, name   => 'Rob', title  => 'Novice', rating => 25,);
 my $five = Games::Tournament::Contestant::Swiss->new(
-    id => 5, name => 'Rod', score => 0, title => 'Novice', rating => 3,);
+    pairingNumber => 5, name => 'Rod', score => 0, title => 'Novice',
+    rating => 3,);
 my $six = Games::Tournament::Contestant::Swiss->new(
-    id => 6, name => 'Rog', score => 0, title  => 'Novice', rating => 2,);
+    pairingNumber => 6, name => 'Rog', score => 0, title  => 'Novice',
+    rating => 2,);
 my $seven = Games::Tournament::Contestant::Swiss->new(
-    id => 7, name  => 'Ron', score => 0, title => 'Novice', rating => 1,);
+    pairingNumber => 7, name  => 'Ron', score => 0, title => 'Novice',
+    rating => 1,);
 my $eight = Games::Tournament::Contestant::Swiss->new(
-    id => 8, name  => 'Ros', score => 0, title => 'Novice',);
+    pairingNumber => 8, name  => 'Ros', score => 0, title => 'Novice',);
 my $nine = Games::Tournament::Contestant::Swiss->new(
-    id    => 9, name  => 'Roy', score => 0, title => 'Novice',);
+    pairingNumber    => 9, name  => 'Roy', score => 0, title => 'Novice',);
 my $ten = Games::Tournament::Contestant::Swiss->new(
-    id    => 10, name  => 'Ruy', score => 0, title => 'Novice',);
+    pairingNumber    => 10, name  => 'Ruy', score => 0, title => 'Novice',);
 
 my $b2 = Games::Tournament::Swiss::Bracket->new(
     score   => 0, members => [ $one, $two, ]);

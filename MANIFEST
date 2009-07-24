@@ -34,6 +34,7 @@ t/dummy10.t
 t/initializePreferences.t
 t/four.t
 t/foura.t
+t/lateentry.t
 t/median.t
 t/met.t
 t/pair.t
@@ -48,4 +49,5 @@ t/preference.t
 t/seven.t
 t/tally.t
 t/three.t
+t/x.t
 Makefile.PL

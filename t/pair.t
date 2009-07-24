@@ -64,14 +64,14 @@ my @tests = (
   $round->{group}->{1}->{Black} eq 'Jose Capablanca' or
   $round->{group}->{1}->{Black} eq 'Your New Nicks' and
   $round->{group}->{1}->{White} eq 'Jose Capablanca'), '$m1 is Nicks&Jose'],
-[ ($round->{group}->{2}->{White} eq 'Alexander Alekhine' and
-  $round->{group}->{2}->{Black} eq 'LaLa Lakers' or
-  $round->{group}->{2}->{Black} eq 'Alexander Alekhine' and
-  $round->{group}->{2}->{White} eq 'LaLa Lakers'), '$m2 is LaLa&Alex'],
+[ ($round->{group}->{3}->{White} eq 'Alexander Alekhine' and
+  $round->{group}->{3}->{Black} eq 'LaLa Lakers' or
+  $round->{group}->{3}->{Black} eq 'Alexander Alekhine' and
+  $round->{group}->{3}->{White} eq 'LaLa Lakers'), '$m2 is LaLa&Alex'],
 [ ($round->{group}->{1}->{White} eq 'Your New Nicks' and
-  $round->{group}->{2}->{Black} eq 'LaLa Lakers' or
+  $round->{group}->{3}->{Black} eq 'LaLa Lakers' or
   $round->{group}->{1}->{Black} eq 'Your New Nicks' and
-  $round->{group}->{2}->{White} eq 'LaLa Lakers'), 'S1 players different roles']
+  $round->{group}->{3}->{White} eq 'LaLa Lakers'), 'S1 players different roles']
 );
 
 my @files = glob './*';

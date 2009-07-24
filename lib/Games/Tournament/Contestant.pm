@@ -1,6 +1,6 @@
 package Games::Tournament::Contestant;
 
-# Last Edit: 2009  6月 30, 13時39分46秒
+# Last Edit: 2009  7月 23, 10時43分21秒
 # $Id: $
 
 use warnings;
@@ -46,6 +46,8 @@ A generic tournament/series player/team contestant object.
 
 	$team = Games::Tournament::Contestant->new( id => '15', name => 'Lala Lakers', rating => 0, score => 1000,  )
 	$grandmaster = Games::Tournament::Contestant->new( name => 'Jose Raul Capablanca', rating => 1000 )
+
+Make sure the ids of all your contestants are unique.
 
 =cut
 
@@ -193,7 +195,7 @@ sub writeCard {
 	$rounds = $deepblue->score
 	next if $deepblue->score
 
-Gets/sets the total score over the rounds in which $deepblue has a score. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check any cards. Internally, this method accumulates the results of all the rounds into a total score, unless no results exist. If they don't exist, a hash key $self->{score} is consulted. You can set the score this way too, bypassing the elegant code to do it from individual game results stored by the Games::Tournament::Contestant object. A hack to allow importing a pairing table.
+Gets/sets the total score over the rounds in which $deepblue has a score. Don't forget to tally $deepblue's scorecard with the appropriate games first! We don't check any cards. Internally, this method accumulates the results of all the rounds into a total score, unless no results exist. If they don't exist, a hash key $self->{score} is consulted. You can set the score this way too, but don't do that. It bypasses the elegant code to do it from individual game results stored by the Games::Tournament::Contestant object. It's a hack to allow importing a pairing table. Finally, if none of the above apply, undef is returned, despite FIDE Rule A2. This means that Bracket and FIDE methods using the score method need to handle undef scores.
 
 =cut
 
@@ -203,7 +205,7 @@ sub score {
     my $score = shift;
     if ( defined $score ) { $self->{score} = $score; }
     my $scores      = $self->scores;
-    return $self->{score} || 0 unless defined $scores and
+    return $self->{score} || undef unless defined $scores and
 		all { defined $_ } values %$scores;
     my %lcconverter = map { lc($_) => $converter{$_} } keys %converter;
     my %scores      = map { $_ => lc $scores->{$_} } keys %$scores;
@@ -215,7 +217,7 @@ sub score {
     my @values = map { $lcconverter{$_} } values %scores;
     my $sum = sum(@values);
     return $sum if defined $sum;
-    return 0;
+    return undef;
 }
 
 
@@ -224,7 +226,7 @@ sub score {
 	$rounds = $deepblue->met(@grandmasters)
 	next if $deepblue->met($capablanca)
 
-Returns an anonymous hash, keyed on @grandmasters' ids, either of the gamecards in which $deepblue remembers meeting the members of @grandmasters or of the empty string '' if there is no record of such a meeting. Don't forget to tally $deepblue's scorecard with the appropriate games first (using collectCards?)! We don't check $deepblue's partners' cards. (Assumes players do not meet more than once!) Don't confuse this with Games::Tournament::met!
+Returns an anonymous hash, keyed on @grandmasters' ids, either of the gamecards in which $deepblue remembers meeting the members of @grandmasters or of the empty string '' if there is no record of such a meeting. Don't forget to tally $deepblue's scorecard with the appropriate games first (using $deepblue->play?)! We don't check $deepblue's partners' cards. (Assumes players do not meet more than once!) Don't confuse this with Games::Tournament::met!
 
 =cut
 
@@ -262,7 +264,7 @@ sub name {
     my $self = shift;
     my $name = shift;
     if ( defined $name ) { $self->{name} = $name; }
-    elsif ( $self->{name} ) { return $self->{name}; }
+    elsif ( exists $self->{name} ) { return $self->{name}; }
 }
 
 
@@ -278,7 +280,7 @@ sub title {
     my $self  = shift;
     my $title = shift;
     if ( defined $title ) { $self->{title} = $title; }
-    elsif ( $self->{title} ) { return $self->{title}; }
+    elsif ( exists $self->{title} ) { return $self->{title}; }
 }
 
 
@@ -310,7 +312,7 @@ sub rating {
     my $self   = shift;
     my $rating = shift;
     if ( defined $rating and $rating =~ m/^\d$/ ) { $self->{rating} = $rating; }
-    elsif ( $self->{rating} ) { return $self->{rating}; }
+    elsif ( exists $self->{rating} ) { return $self->{rating}; }
     else { return 0; }
 }
 
@@ -320,7 +322,7 @@ sub rating {
 	$games = $member->play;
 	$games = $member->play( { $lastround => $game } );
 
-Sets/gets a hash reference to the result of the pairings in each of the rounds played so far. Don't use this to enter a player's match result. Use $tourney->collectCards. Implementation: The keys of the hash are the round numbers and the values are the gamecard of the player in that round. Very similar to the play accessor for tournaments, so this is not good repetition?
+Sets/gets a hash reference to the result of the pairings in each of the rounds played so far. Don't use this to record a player's match result. Use $tourney->collectCards. Implementation: The keys of the hash are the round numbers and the values are the gamecard of the player in that round. Very similar to the play accessor for tournaments, which is what collectCards uses.
 
 =cut
 
@@ -341,7 +343,7 @@ sub play {
 
 	$member->id
 
-Returns/sets the id of the contestant, a number unique to the member.
+Returns/sets the id of the contestant, a number unique to the member. Users must make sure no two players have the same id. Pairing numbers may change with late entries, so the id is important.
 
 =cut
 
@@ -350,6 +352,21 @@ sub id {
     my $id   = shift;
     if ( defined $id ) { $self->{id} = $id; }
     elsif ( exists $self->{id} ) { return $self->{id}; }
+}
+
+=head2 firstround
+
+	$member->firstround
+
+Returns/sets the firstround of the contestant, the round in which they first played or will play. Necessary for handling late entrants.
+
+=cut
+
+sub firstround {
+    my $self = shift;
+    my $firstround   = shift;
+    if ( defined $firstround ) { $self->{firstround} = $firstround; }
+    elsif ( exists $self->{firstround} ) { return $self->{firstround}; }
 }
 
 =head1 AUTHOR

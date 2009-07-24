@@ -39,7 +39,8 @@ sub prepareTournament
 	{
 		delete $player->{scores};
 		delete $player->{score};
-		delete $player->{preference};
+		$player->preference(
+			Games::Tournament::Contestant::Swiss::Preference->new );
 		delete $player->{pairingNumber};
 		delete $player->{roles};
 		delete $player->{floats};
