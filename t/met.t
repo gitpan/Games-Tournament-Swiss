@@ -63,29 +63,14 @@ $t->round(3);
 
 $t->collectCards(@g);
 
-for my $game ( @g ) {
-	my $round = $game->round;
-	my $contestants = $game->contestants;
-	for my $role ( keys %$contestants ) {
-		my $contestant = $contestants->{$role};
-		$contestant->play({ $round => $game });
-	}
-}
-
 my $play = $t->play;
 
 sub player {
 	my $player = shift()-1;
-	my $games = $p[$player]->met(@p);
+	my @rounds = $t->met($p[$player], @p);
 	my @opponents = map { $_->id } @p;
 	my %rounds;
-	@rounds{ @opponents } = ('') x @opponents;
-	for my $opponent ( @opponents )
-	{
-		if ( $opponent and
-		UNIVERSAL::isa($games->{$opponent}, "Games::Tournament::Card") )
-		{ $rounds{$opponent} = $games->{$opponent}->round; }
-	}
+	@rounds{ @opponents } = @rounds;
 	return \%rounds;
 }
 sub tourney { [ $t->met($p[shift()-1], @p) ] }

@@ -1,6 +1,9 @@
 package Games::Tournament::Contestant::Swiss::Preference;
+BEGIN {
+  $Games::Tournament::Contestant::Swiss::Preference::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 13, 18時38分17秒
+# Last Edit: 2010 12月 04, 15時33分15秒
 # $Id: $
 
 use warnings;
@@ -24,13 +27,7 @@ use base qw/Games::Tournament/;
 
 Games::Tournament::Contestant::Swiss::Preference  A competitor's right to a role.
 
-=head1 VERSION
-
-Version 0.04
-
 =cut
-
-our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -66,7 +63,7 @@ sub new {
 
 	$pref->update( \@oldRoles  )
 
-	Updates the difference (ie, the internal representation of preference) on the basis of the last role (and second-last role) in \@oldRoles. A minimal sanity check is performed. \@oldRoles is a history of roles in previous rounds, and it is expected only the last role of this history has not yet been used to update the preference. That is, this method must be used round-by-round to keep a players preference up to date. However, the second-last role (in addition to the last role) is also needed to determine the preference in cases when the same role was taken in the last 2 games. So for updates after the second round, make sure the history is at least 2 elements long. Byes and absences have no effect on the preference.
+	Updates the difference (ie, the internal representation of preference) on the basis of the last role (and second-last role) in \@oldRoles. A minimal sanity check is performed. \@oldRoles is a history of roles in previous rounds, and it is expected only the last role of this history has not yet been used to update the preference. That is, this method must be used round-by-round to keep a players preference up to date. However, the second-last role (in addition to the last role) is also needed to determine the preference in cases when the same role was taken in the last 2 games. So for updates after the second round, make sure the history is at least 2 elements long. Byes and unplayed games have no effect on the preference, so make sure that roles in unplayed games don't make it into oldRoles A5, F2 .
 
 =cut
 
@@ -74,9 +71,8 @@ sub update {
     my $self     = shift;
     my $roles = shift;
     my $message = "Preference update: ";
-    return unless any { $roles->[-1] eq $_ } ROLES;
-    my @byeOut = grep { my $role = $_; any { $role eq $_ } ROLES } @$roles;
-    my @reverseRoles = reverse @byeOut;
+    return unless $roles->[-1] and any { $roles->[-1] eq $_ } ROLES;
+    my @reverseRoles = reverse @$roles;
     my $lastRole       = $reverseRoles[0];
     my $before         = $reverseRoles[1];
     my $oneBeforeThat = $reverseRoles[2];

@@ -1,6 +1,9 @@
 package Games::Tournament::Swiss::Procedure;
+BEGIN {
+  $Games::Tournament::Swiss::Procedure::VERSION = '0.18';
+}
 
-# Last Edit: 2007 Nov 28, 07:36:56 AM
+# Last Edit: 2010 12月 04, 15時35分12秒
 # $Id: $
 
 use warnings;
@@ -15,13 +18,7 @@ use base qq/$Games::Tournament::Swiss::Config::algorithm/;
 
 Games::Tournament::Swiss::Procedure - A wrapper around a swiss pairing algorithm
 
-=head1 VERSION
-
-Version 0.04
-
 =cut
-
-our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 

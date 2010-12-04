@@ -1,6 +1,9 @@
 package Games::Tournament::Swiss::Bracket;
+BEGIN {
+  $Games::Tournament::Swiss::Bracket::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 21, 18時03分57秒
+# Last Edit: 2010 12月 04, 15時35分29秒
 # $Id: $
 
 use warnings;
@@ -19,13 +22,7 @@ use List::MoreUtils qw/any notall/;
 
 Games::Tournament::Swiss::Bracket - Players with same/similar scores pairable with each other
 
-=head1 VERSION
-
-Version 0.06
-
 =cut
-
-our $VERSION = '0.06';
 
 =head1 SYNOPSIS
 
@@ -90,7 +87,7 @@ sub natives {
 
  @floaters = $group->citizens
 
-Returns those members who belong to this bracket. These members don't include those have just floated in, even though this floating status may be permanent. One is a native of only one bracket, and you cannot change this status except by naturalization.
+Returns those members who belong to this bracket. These members don't include those have just floated in, even though this floating status may be permanent. One is a citizen of only one bracket, and you cannot change this status except by naturalization.
 
 =cut
 
@@ -196,10 +193,10 @@ Returns the members includeable in pairing procedures for this bracket because t
 
 sub residents {
     my $self    = shift;
-    my @members = @{ $self->{members} };
+    my $members = $self->members;
     my @residents;
     my $floated = $self->emigrants;
-    for my $member (@members) {
+    for my $member (@$members) {
         push @residents, $member
           unless any { $member->pairingNumber == $_->pairingNumber } @$floated;
     }
@@ -212,7 +209,7 @@ sub residents {
 	$bracket->emigrants($member)
 	$gone = $bracket->emigrants
 
-Sets whether this citizen will not be included in pairing of this bracket. That is whether they have been floated to another bracket for pairing there. Gets all such members. A player may or may not be an emigrant. They can only stop being an emigrant if they move back to their native bracket. To do this, they have to return.
+Sets whether this citizen will not be included in pairing of this bracket. That is whether they have been floated to another bracket for pairing there. Gets all such members. A player may or may not be an emigrant. They can only stop being an emigrant if they move back to their native bracket. To do this, they have to be processed by 'entry'.
 
 =cut
 
@@ -257,38 +254,20 @@ sub exit {
 	$bracket->entry($native)
 	$bracket->entry($foreigner)
 
-Registers $foreigner as a resident, and removes $native from the list of emigrants of this bracket, because they have returned from another bracket as in C12, 13.
+Registers $foreigner as a resident (and was removing $native from the list of emigrants of this bracket, because they have returned from another bracket as in C12, 13).
 
 =cut
 
 sub entry {
     my $self   = shift;
-    my $members = $self->members;
+    my $members = $self->residents;
     my $enterer = shift;
-    my $myId = $enterer->pairingNumber;
-    my @residents = grep { $_->pairingNumber != $myId } @$members;
+    my $myId = $enterer->id;
     my $number = $self->number;
-    croak "Player $myId cannot enter Bracket $number. Is already there." unless
-	    @residents == @$members;
-    my @stayers = (@residents, $enterer);
-    croak "Player $myId did not enter Bracket $number" unless defined $enterer
-	    and $enterer->isa('Games::Tournament::Contestant') and
-	    @stayers == @residents + 1;
-    $self->members(\@stayers);
-    #die
-#"Pla#yer $member->{id} floating $member->{floater} from $self->{score}-score bracket?"
-    #  unless $member->floating
-    #  and $member->floating =~ m/Down|Up/;
-    #my $members   = $self->members;
-    #my $emigrants = $self->emigrants;
-    #if ( grep { $_->id == $member->id } @$emigrants ) {
-    #    $self->reentry($member);
-    #}
-    #else {
-    #    if ( $member->floating eq 'Down' ) { unshift @$members, $member; }
-    #    else { push @$members, $member; }
-    #    $self->members($members);
-    #}
+    croak "Player $myId cannot enter Bracket $number. Is already there." if 
+	any { $_->{id} eq $myId } @$members;
+    unshift @$members, $enterer;
+    $self->members(\@$members);
     return;
 }
 
@@ -408,7 +387,7 @@ sub resetS12 {
 	    my $score = defined $member->score? $member->score: 0;
 	    push @{ $scorers{$score} }, $member;
 	}
-	my @scores = reverse sort keys %scorers;
+	my @scores = reverse sort { $a <=> $b } keys %scorers;
 	#carp @scores . " different scores in Hetero Bracket $number"
 	#	if @scores > 2;
         @s2 = @{$scorers{$scores[-1]}};
@@ -420,8 +399,8 @@ sub resetS12 {
         @s1 = ( $self->rank(@$members) )[ 0 .. $p - 1 ];
         @s2 = ( $self->rank(@$members) )[ $p .. $#$members ];
     }
-    $self->{s1} = \@s1;
-    $self->{s2} = \@s2;
+    $self->s1(\@s1);
+    $self->s2(\@s2);
     my @lastS2ids = reverse map { $_->pairingNumber } @s2;
     $self->{lastS2ids} = \@lastS2ids;
     return;

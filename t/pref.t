@@ -16,8 +16,9 @@ plan tests => 1 * blocks;
 
 use Games::Tournament::Swiss::Config;
 my %unabbr = Games::Tournament::Swiss::Config->abbreviation;
-$unabbr{U} = 'Undefined';
+$unabbr{'-'} = 'Unpaired';
 my %abbr = reverse %unabbr;
+$abbr{Unpaired} = 'U';
 
 sub prefseries {
 	my $play = shift;
@@ -39,7 +40,7 @@ sub prefseries {
 			$oldRoles[0] = $roles[$round-1];
 		}
 		$pref->update( \@oldRoles );
-		my $role = $pref->role || 'Undefined';
+		my $role = $pref->role || 'Unpaired';
 		my $strength = $pref->strength;
 		$wants .= ' ' . $abbr{$role};
 		$degree .= ' ' . $abbr{$strength};

@@ -1,7 +1,10 @@
 package Games::Tournament::Swiss;
+BEGIN {
+  $Games::Tournament::Swiss::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 24, 12時45分57秒
-# $Id: $
+# Last Edit: 2010 12月 04, 15時30分33秒
+# $Id: /loc/swiss/trunk/lib/Games/Tournament/Swiss.pm 6473 2010-12-04T07:40:19.478649Z drbean  $
 
 use warnings;
 use strict;
@@ -23,20 +26,14 @@ use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Swiss::Procedure;
 use Games::Tournament::Contestant::Swiss::Preference;
 
-use List::Util qw/min reduce sum first/;
+use List::Util qw/max min reduce sum first/;
 use List::MoreUtils qw/any all/;
 
 =head1 NAME
 
 Games::Tournament::Swiss - FIDE Swiss Same-Rank Contestant Pairing 
 
-=head1 VERSION
-
-Version 0.17
-
 =cut
-
-our $VERSION = '0.17';
 
 =head1 SYNOPSIS
 
@@ -64,21 +61,29 @@ In a Swiss tournament, there is a pre-declared number of rounds, each contestant
 
  @rankings = $tourney->assignPairingNumbers;
 
-Sets the participants pairing numbers, sorting on rating, title and name, and substitutes this for the id they had before (The old id is saved as oldId. But don't change id to pairingNumber. It will change with late entries.) This function uses Games::Tournament::rank. Before the first round, all scores are usually 0. A2
+Sets the participants pairing numbers, sorting on rating, title and name, and substitutes this for the id they had before (The id was, but is no longer, saved as oldId. But don't change id to pairingNumber. It will change with late entries.) This function uses Games::Tournament::rank. Before the first round, all scores are usually 0. A2
 
 =cut
 
 sub assignPairingNumbers {
     my $self    = shift;
     my @players = @{ $self->entrants };
-    return if all { $_->pairingNumber } @players;
+    $self->log( 'Pairing numbers' );
+    my $numbers = sub { join ', ',
+	    map { $_->id . ": " . $_->pairingNumber } @players;
+    };
+    if ( all { $_->pairingNumber } @players ) {
+	$self->log( &$numbers );
+	return;
+    }
     my @rankings = $self->rank(@players);
     foreach my $n ( 0 .. $#rankings ) {
-        $rankings[$n]->pairingNumber( $n+1 );
-        $rankings[$n]->oldId( $rankings[$n]->id ) unless $rankings[$n]->oldId;
+	my $id = $rankings[$n]->id;
+	my $player = $self->ided($id);
+        $player->pairingNumber( $n+1 );
     }
-    $self->log( join ', ', map { $_->pairingNumber . ": " . $_->id } @rankings);
-    $self->entrants( \@rankings );
+    $self->log( &$numbers );
+    $self->entrants( \@players );
 }
 
 
@@ -86,27 +91,34 @@ sub assignPairingNumbers {
 
  @rankings = $tourney->initializePreferences;
 
-Before the first round, the color (role) preference of the highest ranked player and the other odd-numbered players in the top half of the rankings is determined by lot. The preference of the even-numbered players in the top half is given to the other color. If there is only one player in the tournament, the preference is not initialized. The method assumes all entrants have a preference attribute. This accessor is given the player by the Games::Tournament::Contestant::Swiss constructor. E5
+Before the first round, the color (role) preference of the highest ranked player and the other odd-numbered players in the top half of the rankings is determined by lot. The preference of the even-numbered players in the top half is given to the other color. If there is only one player in the tournament, the preference is not initialized. The method assumes all entrants have a preference attribute. This accessor is given the player by the Games::Tournament::Contestant::Swiss constructor. We take care to put the players back in the same order that we got them from entrants method. Users may rely on the original order being maintained in web app cookies. E5
 
 =cut
 
 sub initializePreferences {
     my $self    = shift;
     my @players = @{ $self->{entrants} };
+    my @rankings = $self->rank( @players );
     my ( $evenRole, $oddRole ) = $self->randomRole;
-    my $p = int( @players / 2 );
+    my $p = int( @rankings / 2 );
     if ( $p == 0 ) {
-        $players[ 0 ]->preference->sign('');
-        $players[ 0 ]->preference->difference(0);
-	return $self->entrants( \@players );
+        $rankings[ 0 ]->preference->sign('');
+        $rankings[ 0 ]->preference->difference(0);
+	return $self->entrants( \@rankings );
     }
     for ( my $n=0; $n <= $p-1; $n+=2 ) {
-        $players[ $n ]->preference->sign($evenRole);
-        $players[ $n ]->preference->difference(0);
+        $rankings[ $n ]->preference->sign($evenRole);
+        $rankings[ $n ]->preference->difference(0);
     }
     for ( my $n=1; $n <= $p-1; $n+=2 ) {
-        $players[ $n ]->preference->sign($oddRole);
-        $players[ $n ]->preference->difference(0);
+        $rankings[ $n ]->preference->sign($oddRole);
+        $rankings[ $n ]->preference->difference(0);
+    }
+    foreach my $n ( 0 .. $#rankings ) {
+	my $id = $rankings[$n]->id;
+	my $player = $self->ided($id);
+	my $preference = $rankings[$n]->preference;
+        $player->preference( $preference );
     }
     $self->entrants( \@players );
 }
@@ -116,9 +128,9 @@ sub initializePreferences {
 
  $tourney->recreateCards( {
      round => $round,
-     opponents => { 1 => 2, 2 => 1},
-     roles => { 1 => 'W', 2 => 'B' },
-     floats => { 1 => 'U', 2=> 'D' }
+     opponents => { 1 => 2, 2 => 1, 3 => 'Bye', 4 => '-' },
+     roles => { 1 => 'W', 2 => 'B', 3 => 'Bye', 4 => '-' },
+     floats => { 1 => 'U', 2=> 'D', 3 => 'Down', 4 => 'Not' }
  } )
 
 From hashes of the opponents, roles and floats for each player in a round (as provided by a pairing table), draws up the original game cards for each of the matches of the round. Returned is a list of Games::Tournament::Card objects, with undefined result fields. Pairing numbers are not used. Ids are used. Pairing numbers change with late entries.
@@ -134,13 +146,14 @@ sub recreateCards {
     my $floats = $args->{floats};
     my $players = $self->entrants;
     my @ids = map { $_->id } @$players;
+    my $absentees = $self->absentees;
+    my @absenteeids = map { $_->id } @$absentees;
     my $test = sub {
 	my %count = ();
 	$count{$_}++ for @ids, keys %$opponents, keys %$roles, keys %$floats;
-	return all { $count{$_} == 4 } keys %count;
+	return grep { $count{$_} != 4 } keys %count;
 	    };
-    croak "Not all players have a complete game card in round $round"
-		    unless &$test;
+    carp "Game card not constructable for player $_ in round $round" for &$test;
     my (%games, @games);
     for my $id ( @ids )
     {
@@ -153,13 +166,18 @@ sub recreateCards {
         my $opponentsOpponent = $opponents->{$opponentId};
         croak
 "Player ${id}'s opponent is $opponentId, but ${opponentId}'s opponent is $opponentsOpponent, not $id in round $round"
-          unless $opponentId eq 'Bye'
+          unless $opponentId eq 'Bye' or $opponentId eq 'Unpaired'
               or $opponentsOpponent eq $id;
         my $role         = $roles->{$id};
         my $opponentRole = $roles->{$opponentId};
-
-        if ( $opponentId eq 'Bye' ) {
+        if ( $opponentId eq 'Unpaired' ) {
             croak "Player $id has $role, in round $round?"
+              unless $player and $role eq 'Unpaired';
+	    next;
+	    next;
+        }
+        elsif ( $opponentId eq 'Bye' ) {
+            croak "Player $id has $role role, in round $round?"
               unless $player and $role eq 'Bye';
         }
         else {
@@ -202,7 +220,7 @@ sub recreateCards {
  $play = $tourney->collectCards( @games );
   next if $htable->{$player1->id}->{$player2->id};
 
-Records @games after they have been played. Stored as $tourney's play field, keyed on round and ids of players.  Returns the new play field. Updates player scores, preferences, unless the player was absent or had a Bye. TODO Die (or warn) if game has no results TODO This has non-Swiss subclass elements I could factor out into a method in Games::Tournament. TODO What if player is matched more than one time in the round, filling in for someone? XXX It looks like all the games have to be the same round, or you have to collect all cards in one round before collecting cards in following rounds. XXX I'm having problems with recording roles. I want to be lazy about it, and trust the card I get back before the next round. The problem with this is, I may be getting the role from the wrong place. It should come from the card, and is a role which was assigned in the previous round, and is only now being recorded, at this point between the previous round and the next round. Or is the problem copying by value rather than reference of the entrants? Now I also need to record floats. It would be good to do this at the same time as I record roles. The card is the appropriate place to get this info according to A4. 
+Records @games after they have been played. Stored as $tourney's play field, keyed on round and ids of players.  Returns the new play field. Updates player scores, preferences, unless the player forfeited the game or had a Bye. TODO Die (or warn) if game has no results TODO This has non-Swiss subclass elements I could factor out into a method in Games::Tournament. TODO What if player is matched more than one time in the round, filling in for someone? XXX It looks like all the games have to be the same round, or you have to collect all cards in one round before collecting cards in following rounds. XXX I'm having problems with recording roles. I want to be lazy about it, and trust the card I get back before the next round. The problem with this is, I may be getting the role from the wrong place. It should come from the card, and is a role which was assigned in the previous round, and is only now being recorded, at this point between the previous round and the next round. Or is the problem copying by value rather than reference of the entrants? Now I also need to record floats. It would be good to do this at the same time as I record roles. The card is the appropriate place to get this info according to A4. 
 
 =cut
 
@@ -228,25 +246,25 @@ sub collectCards {
 		my $entrant = $self->ided($id);
 		my $oldroles = $player->roles;
 		my $scores   = $player->scores;
-		my ( $role, $float );
+		my ( $role, $float, $score );
 		$role             = $game->myRole($player);
 		$float            = $game->myFloat($player);
-		$scores->{$round} = $role eq 'Bye'? 'Bye':
-				    $game->{result}->{$role};
+		$scores->{$round} = ref $game->result eq 'HASH'? 
+			    $game->result->{$role}: undef;
+		$score = $scores->{$round};
 		#carp
-		#  "No result on card for player $id as $role in round $round "
-		#	unless $scores->{$round};
+		#  "No result on card for player $id as $role in round $round,"
+		#	unless $score;
 		$game ||= "No game";
 		$play->{$round}->{$id} = $game;
 		$entrant->scores($scores);
-		carp "No record in round $round for player $id $player->{name}"
+		carp "No record in round $round for player $id $player->{name},"
 		  unless $play->{$round}->{$id};
-		$entrant->roles($role) unless $scores->{round} and
-			$scores->{$round} eq 'Bye'||'Absent';
+		$entrant->roles( $round, $role );
 		$entrant->floats( $round, $float );
 		$entrant->floating('');
-		$entrant->preference->update( $entrant->roles ) unless
-		    $scores->{round} and $scores->{$round} eq 'Bye'||'Absent';
+		$entrant->preference->update( $entrant->rolesPlayedList ) unless
+		    $score and ( $score eq 'Bye' or $score eq 'Forfeit' );
 ;
 	    }
 	}
@@ -255,11 +273,44 @@ sub collectCards {
 }
 
 
+=head2 orderPairings
+
+ @schedule = $tourney->orderPairings( @games );
+
+Tables are ordered by scores of the player with the higher score at the table, then the total scores of the players (in other words, the scores of the other player), then the A2 ranking of the higher-ranked player, in that order. F1
+
+=cut
+
+sub orderPairings {
+    my $self     = shift;
+    my @games     = @_;
+    my $entrants = $self->entrants;
+    my @rankedentrants = $self->rank(@$entrants);
+    my %ranking = map { $rankedentrants[$_]->id => $_ } 0 .. $#rankedentrants;
+    my @orderings = map { 
+		    my @players = $_->myPlayers;
+		    my @scores = map { $_->score || 0 } @players;
+		    my $higherscore = max @scores;
+		    my $totalscore = sum @scores;
+		    my @rankedplayers = $self->rank( @players );
+		    {	higherscore => $higherscore,
+			totalscore => $totalscore,
+			higherranking => $ranking{$rankedplayers[0]->id} };
+		} @games;
+    my @neworder = map { $games[$_] } sort {
+	    $orderings[$b]->{higherscore} <=> $orderings[$a]->{higherscore} ||
+	    $orderings[$b]->{totalscore} <=> $orderings[$a]->{totalscore} ||
+	    $orderings[$a]->{higherranking} <=> $orderings[$b]->{higherranking}
+		    } 0 .. $#orderings;
+    return @neworder;
+}
+
+
 =head2 publishCards
 
  $schedule = $tourney->publishCards( @games );
 
-Announces @games before they have been played, and stores them as $tourney's play field, keyed on round and ids of players.  Returns the new play field. TODO This has non-Swiss subclass elements I could factor out into a method in Games::Tournament.
+Stores @games, perhaps before they have been played, as $tourney's play field, keyed on round and ids of players.  Returns the games in F1 ordering.
 
 =cut
 
@@ -281,15 +332,15 @@ sub publishCards {
             $play->{$round}->{$id} = $game;
         }
     }
-    $self->play($play);
+    $self->orderPairings( @games );
 }
 
 
 =head2 myCard
 
- $game = $tourney->myCard(round => 4, player => $alekhine);
+ $game = $tourney->myCard(round => 4, player => 13301616);
 
-Finds match from $tourney's play accessor, which is keyed on round and ids of players.
+Finds match from $tourney's play accessor, which is keyed on round and IDS of players. 'player' is id of player.
 
 =cut
 
@@ -297,10 +348,9 @@ sub myCard {
     my $self    = shift;
     my %args    = @_;
     my $round   = $args{round};
-    my $player  = $args{player};
-    my $matches = $self->{play}->{$round};
-    my $match   = grep { $_->{id} == $player->{id} } %$matches;
-    return $match;
+    my $id  = $args{player};
+    my $roundmatches = $self->{play}->{$round};
+    return $roundmatches->{$id};
 }
 
 
@@ -315,9 +365,12 @@ Returns for the next round a hash of Games::Tournament::Swiss::Bracket objects g
 sub formBrackets {
     my $self    = shift;
     my $players = $self->entrants;
+    my $absentees = $self->absentees;
     my %hashed;
     my %brackets;
     foreach my $player (@$players) {
+	my $id = $player->id;
+	next if any { $id eq $_->id } @$absentees;
         my $score = defined $player->score ? $player->score : 0;
         # die "$player has no score. Give them a zero, perhaps?"
         #   if $score eq "None";
@@ -347,7 +400,7 @@ sub formBrackets {
 
  $pairing = $tourney->pairing( \@groups );
 
-Returns a Games::Tournament::Swiss::Procedure object. Groups are Games::Tournament::Swiss::Brackets objects of contestants with the same score and they are ordered by score, the group with the highest score first, and the group with the lowest score last. This is the point where round i becomes round i+1.
+Returns a Games::Tournament::Swiss::Procedure object. Groups are Games::Tournament::Swiss::Brackets objects of contestants with the same score and they are ordered by score, the group with the highest score first, and the group with the lowest score last. This is the point where round i becomes round i+1. But the program is expected to update the Games::Tournament::Swiss object itself. (Why?)
 
 =cut
 
@@ -401,7 +454,7 @@ sub compatible {
 	next if $games->{$alekhine->pairingNumber}->
 	    {$capablanca->pairingNumber}
 
-Returns an anonymous hash, keyed on the ids of the tourney's entrants, of the round in which individual entrants met. Don't forget to collect scorecards in the appropriate games first! (No tracking of how many times players have met if they have met more than once!) Do you know what round it is? B1 XXX Unplayed pairings are not considered illegal in future rounds. F2 
+Returns an anonymous hash, keyed on the ids of the tourney's entrants, of the round in which individual entrants met. Don't forget to collect scorecards in the appropriate games first! (No tracking of how many times players have met if they have met more than once!) Do you know what round it is? B1 XXX Unplayed pairings are not considered illegal in future rounds. F2 See also Games::Tournament::met.
 
 =cut
 
@@ -409,6 +462,8 @@ sub whoPlayedWho {
     my $self    = shift;
     my $players = $self->entrants;
     my @ids     = map { $_->id } @$players;
+    my $absentees = $self->absentees;
+    my @absenteeids     = map { $_->id } @$absentees;
     my $play    = $self->play;
     my $dupes;
     my $lastround = $self->round;
@@ -421,18 +476,19 @@ sub whoPlayedWho {
             if ( $game and $game->can("myRole") ) {
 		next if $game->result and $game->result eq 'Bye';
                 my $role = $game->myRole($player);
-                die "Player $id, $player->{name}'s role is $role of " . ROLES
-                  . " in round $round?"
+                die
+	"Player $id, $player->{name}'s role is $role, in round $round?"
                   unless any { $_ eq $role } ROLES, 'Bye';
 		next if $game->result and exists $game->result->{$role} and
-			$game->result->{$role} eq 'Absent';
+			$game->result->{$role} eq 'Forfeit';
                 if ( any { $role eq $_ } ROLES ) {
                     my $otherRole = first { $role ne $_ } ROLES;
                     my $opponent = $game->contestants->{$otherRole};
                     $dupes->{$id}->{ $opponent->id } = $round;
                 }
             }
-	    elsif ( $player->firstround > $round ) { next }
+	    elsif ( $player->firstround > $round or
+		any { $id eq $_ } @absenteeids ) { next }
             else { warn "Player ${id} game in round $round?"; }
         }
     }
@@ -483,6 +539,8 @@ sub byesGone {
     my $self    = shift;
     my $players = $self->entrants;
     my @ids     = map { $_->id } @$players;
+    my $absentees = $self->absentees;
+    my @absenteeids     = map { $_->id } @$absentees;
     my $play    = $self->play;
     my $byes = {};
     my $round = $self->round;
@@ -499,7 +557,8 @@ sub byesGone {
                     $byes->{$id} = $round;
                 }
             }
-	    elsif ( $player->firstround > $round ) { next }
+	    elsif ( $player->firstround > $round or
+		any { $id eq $_ } @absenteeids ) { next }
             else { warn "Player ${id} had Bye in round $round?"; }
         }
     }

@@ -1,13 +1,18 @@
 package Games::Tournament::Card;
+BEGIN {
+  $Games::Tournament::Card::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 03, 13時20分49秒
+# Last Edit: 2010 12月 04, 15時36分05秒
 # $Id: $
 
 use warnings;
 use strict;
 use Carp;
 
-use List::Util qw/min reduce sum/;
+use List::Util qw/min reduce sum first/;
+use List::MoreUtils qw/any all/;
+use Scalar::Util qw/looks_like_number/;
 
 use constant ROLES => @Games::Tournament::Swiss::Config::roles?
 			@Games::Tournament::Swiss::Config::roles:
@@ -17,17 +22,11 @@ use constant ROLES => @Games::Tournament::Swiss::Config::roles?
 
 Games::Tournament::Card - A record of the results of a match
 
-=head1 VERSION
-
-Version 0.02
-
 =cut
-
-our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
-    $action = Games::Tournament:Card->new(round => 1, contestants => {Black => $knicks, White => $deepblue}, result => { Black => 'Win', White => 'Loss' });
+    $game = Games::Tournament:Card->new(round => 1, contestants => {Black => $knicks, White => $deepblue}, result => { Black => 'Win', White => 'Loss' });
 
 =head1 DESCRIPTION
 
@@ -37,7 +36,7 @@ In a tournament, matches take place in rounds between contestants, who are maybe
 
 =head2 new
 
-    $action = Games::Tournament:Card->new(
+    $game = Games::Tournament:Card->new(
 	    round => 1,
 	    contestants => {Black => $knicks, White => $deepblue},
 	    result => { Black => 'Win', White => 'Loss' },
@@ -50,7 +49,7 @@ In a tournament, matches take place in rounds between contestants, who are maybe
 	    result => "Bye"
 	    floats => 'Down' );
 
-'contestants' is a hash ref of player objects, keyed on Black and White, or Home and Away, or some other role distinction that needs to be balanced over the tournament. The players are probably instances of the Games::Tournament::Contestant::Swiss class. 'result' is a hash reference, keyed on the same keys as contestants, containing the results of the match. 'floats' is a hash of  which role was floated up and which down. The default is neither contestant was floated, and 'Down' for a Bye. A4. What are the fields in NoShow and byes? NoShow has no special form. Bye is { Bye => $player }. TODO Perhaps the fields should be Winner and Loser, and Down and Up? NoShow should be Absent.
+'contestants' is a hash ref of player objects, keyed on Black and White, or Home and Away, or some other role distinction that needs to be balanced over the tournament. The players are probably instances of the Games::Tournament::Contestant::Swiss class. 'result' is a hash reference, keyed on the same keys as contestants, containing the results of the match. 'floats' is a hash of  which role was floated up and which down. The default is neither contestant was floated, and 'Down' for a Bye. A4. What are the fields in Forfeits and byes? Forfeit and Tardy have no special form, other than { White => 'Forfeit', Black => 'Tardy' }. Bye is { Bye => $player }. TODO Perhaps the fields should be Winner and Loser, and Down and Up?
 
 =cut 
 
@@ -86,7 +85,7 @@ sub canonize {
                 $result{$role} = $result->{$role} = 'Bye';
             }
         elsif ( exists $result->{$role} ) {
-            if ( $result->{$role} =~ m/^(?:Win|Loss|Draw|Absent)$/i ) {
+            if ( $result->{$role} =~ m/^(?:Win|Loss|Draw|Forfeit)$/i ) {
                 $result{$role} = $result->{$role};
             }
             else {
@@ -147,15 +146,65 @@ sub myResult {
 
     $game->myPlayers
 
-Returns an array of the players from $game, eg ($alekhine, $yourNewNicks).
+Returns an array of the players from $game, eg ($alekhine, $yourNewNicks) in ROLES order.
 
 =cut 
 
 sub myPlayers {
     my $self        = shift;
     my $contestants = $self->contestants;
-    my @players     = values %$contestants;
+    my @players;
+    for my $role ( ROLES ) {
+	push @players, $contestants->{$role} if exists $contestants->{$role};
+    }
+    push @players, $contestants->{Bye} if exists $contestants->{Bye};
     return @players;
+}
+
+
+=head2 hasPlayer
+
+    $game->hasPlayer($player)
+
+A predicate to perform a test to see if a player is a contestant in $game. Because different objects may refer to the same player when copied by value, use id to decide.
+
+=cut 
+
+sub hasPlayer {
+    my $self        = shift;
+    my $player = shift;
+    my @contestants = $self->myPlayers;
+    any { $player->id eq $_->id } @contestants;
+}
+
+
+=head2 myOpponent
+
+    $game->myOpponent($player)
+
+Returns the opponent of $player from $game. If $player has a Bye, return a Games::Tournament::Contestant::Swiss object with name 'Bye', and id 'Bye'.
+
+=cut 
+
+sub myOpponent {
+    my $self       = shift;
+    my $contestant = shift;
+    my $id = $contestant->id;
+    my $contestants = $self->contestants;
+    my @contestants = values %$contestants;
+    my %dupes;
+    for my $contestant ( @contestants )
+    {
+	die "Player $contestant isn't a contestant"
+	unless $contestant and
+		$contestant->isa('Games::Tournament::Contestant::Swiss');
+    }
+    my @dupes = grep { $dupes{$_->id}++ } @contestants;
+    croak "Players @dupes had more than one role" if @dupes;
+    my $opponent = first { $id ne $_->id } @contestants;
+    $opponent = Games::Tournament::Contestant::Swiss->new(
+	name => "Bye", id => "Bye") if $self->isBye;
+    return $opponent;
 }
 
 
@@ -172,7 +221,14 @@ sub myRole {
     my $contestant = shift;
     my $id = $contestant->id;
     my $contestants = $self->contestants;
-    my @contestants = values %$contestants;
+    my @contestants = $self->myPlayers;
+    unless ( $self->hasPlayer($contestant) ) {
+	my $round = $self->round;
+	my $players;
+	$players .= " $_: " . $contestants->{$_}->id for keys %$contestants;
+	carp "Player $id not in Round $round match. Contestants are $players.";
+	return;
+    }
     my %dupes;
     for my $contestant ( @contestants )
     {
@@ -211,9 +267,26 @@ sub myFloat {
 }
 
 
+=head2 opponentRole
+
+    Games::Tournament::Card->opponentRole( $role )
+
+Returns the role of the opponent of the player in the given role. Class method.
+
+=cut 
+
+sub opponentRole {
+    my $self       = shift;
+    my $role = shift;
+    my %otherRole;
+    @otherRole{ (ROLES) } = reverse (ROLES);
+    return $otherRole{ $role };
+}
+
+
 =head2 round
 
- $action->round
+ $game->round
 
 Returns the round in which the match is taking place.
 
@@ -227,7 +300,7 @@ sub round {
 
 =head2 contestants
 
-	$action->contestants
+	$game->contestants
 
 Gets/sets the participants as an anonymous array of player objects.
 
@@ -243,7 +316,7 @@ sub contestants {
 
 =head2 result
 
-	$action->result
+	$game->result
 
 Gets/sets the results of the match.
 
@@ -257,11 +330,62 @@ sub result {
 }
 
 
+=head2 equalScores
+
+	$game->equalScores
+
+Tests whether the players have equal scores, returning 1 or ''. If scores were not equal, they are (should be) floating.
+
+=cut
+
+sub equalScores {
+    my $self   = shift;
+    my $contestants = $self->contestants;
+    my @score = map { $contestants->{$_}->score } ROLES;
+    return unless looks_like_number $score[0];
+    return all { $score[0] == $_ } @score;
+}
+
+
+=head2 higherScoreRole
+
+	$game->higherScoreRole
+
+Returns the role of the player with the higher score, returning '', if scores are equal.
+
+=cut
+
+sub higherScoreRole {
+    my $self   = shift;
+    my $contestant = $self->contestants;
+    my @score = map { $contestant->{$_}->score } ROLES;
+    return (ROLES)[0] if $score[0] > $score[1];
+    return (ROLES)[1] if $score[0] < $score[1];
+    return '';
+}
+
+
+=head2 floats
+
+	$game->floats
+
+Gets/sets the floats of the match. Probably $game->float($player, 'Up') is used however, instead.
+
+=cut
+
+sub floats {
+    my $self   = shift;
+    my $floats = shift;
+    if ( defined $floats ) { $self->{floats} = $floats; }
+    else { return $self->{floats}; }
+}
+
+
 =head2 float
 
 	$card->float($player[,'Up|Down|Not'])
 
-Gets/sets whether the player was floated 'Up', 'Down', or 'Not' floated.
+Gets/sets whether the player was floated 'Up', 'Down', or 'Not' floated. $player->floats is not changed. This takes place in $tourney->collectCards. TODO what if $player is 'Bye'?
 
 =cut
 
@@ -276,10 +400,27 @@ sub float {
       or $role     eq (ROLES)[0]
       or $role     eq (ROLES)[1];
     my $float = shift;
-    if ( defined $float ) { $self->{floats}->{$role} = $float; }
+    if ( $role eq 'Bye' ) { return 'Down'; }
+    elsif ( defined $float ) { $self->{floats}->{$role} = $float; }
     elsif ( $self->{floats}->{$role} ) { return $self->{floats}->{$role}; }
-    elsif ( $role eq 'Bye' ) { return 'Down'; }
     else { return 'Not'; }
+}
+
+=head2 isBye
+
+	$card->isBye
+
+Returns whether the card is for a bye rather than a game between two oppponents.
+
+=cut
+
+sub isBye {
+    my $self   = shift;
+    my $contestants = $self->contestants;
+    my @status = keys %$contestants;
+    return 1 if @status == 1 and any { $_ eq 'Bye' } @status;
+    return 0 if @status == 2 and all { $_ eq (ROLES)[0] or $_ eq (ROLES)[1] } @status;
+    return;
 }
 
 =head1 AUTHOR

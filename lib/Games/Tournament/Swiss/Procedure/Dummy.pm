@@ -1,6 +1,9 @@
 package Games::Tournament::Swiss::Procedure::Dummy;
+BEGIN {
+  $Games::Tournament::Swiss::Procedure::Dummy::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 06, 16時20分56秒
+# Last Edit: 2010 12月 04, 15時34分54秒
 # $Id: $
 
 use warnings;
@@ -16,13 +19,7 @@ use Games::Tournament::Contestant::Swiss;
 
 Games::Tournament::Swiss::Procedure::Dummy - A brain-dead pairing algorithm
 
-=head1 VERSION
-
-Version 0.03
-
 =cut
-
-our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 

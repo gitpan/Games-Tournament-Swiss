@@ -1,18 +1,19 @@
 #!/usr/bin/perl
 
-# Last Edit: 2009  7月 05, 18時55分08秒
+# Last Edit: 2010 11月 14, 14時41分13秒
 # $Id: /swiss/trunk/script_files/pairstately 1472 2007-10-13T02:03:22.823448Z greg  $
 
 use strict;
 use warnings;
 
 use YAML qw/LoadFile DumpFile/;
+use List::Util qw/first/;
 use List::MoreUtils qw/all any/;
 
 use Games::Tournament::Swiss::Config;
 
 my $swiss = Games::Tournament::Swiss::Config->new;
-my $league = LoadFile "../league.yaml";
+my $league = LoadFile "../../league.yaml";
 die 'round.yaml already exists' if -e 'round.yaml';
 
 my $roles = $league->{roles} || [$swiss->roles];
@@ -49,8 +50,8 @@ my $results;
 unless ($round < $firstround)
 {
     my $scoresdirectory;
-    $scoresdirectory = exists $league->{hw}? $league->{hw} : "../scores";
-    $results = LoadFile( "$scoresdirectory/$previous.yaml" );
+    $scoresdirectory = exists $league->{compcomp}? $league->{compcomp} : "../comp";
+    $results = LoadFile( "../$previous/scores.yaml" );
     my @tables;
     if ( @tables = (keys %$results) and all {ref} @{$results}{@tables} ) {
 	for my $table ( @tables ) {
@@ -66,7 +67,7 @@ unless ($round < $firstround)
 	    }
 	}
     }
-    DumpFile "$scoresdirectory/$previous.yaml.bak", $results;
+    DumpFile "scores.yaml.bak", $results;
 }
 
 my $oldlist;
@@ -177,18 +178,19 @@ for my $game (@games) {
 }
 
 if ( $newplayers ) {
-    DumpFile '../league.yaml.bak', $league;
+    DumpFile '../../league.yaml.bak', $league;
     for my $member ( @{$league->{member}} )
     {
 	next if grep { $_ eq $member->{name} } @absentees;
 	next if $member->{pairingnumber} and
 	    grep { $_->pairingNumber == $member->{pairingnumber} } @$lineup;
-	if ( my @id = grep { $_->oldId == $member->{id} } @$lineup )
+	my $ided;
+	if ($ided = first { $_->oldId and $_->oldId eq $member->{id} } @$lineup)
 	{
-	    $member->{pairingnumber} = $id[0]->pairingNumber;
+	    $member->{pairingnumber} = $ided->pairingNumber;
 	}
     }
-    DumpFile '../league.yaml', $league;
+    DumpFile '../../league.yaml', $league;
     }
 
 
@@ -236,14 +238,14 @@ The scripts in script_files/ need to be installed somewhere so that they can be 
 
 =item B<DIRECTORY LAYOUT>
 
-The scripts assume that there is a directory in which a configuration file, called league.yaml, with data about the players exists. The rounds are paired in subdirectories, named 1,2,3,.. in this directory. Files named:
+The scripts assume that there is a directory in which a configuration file, called league.yaml, with data about the players exists. Also in the directory is a subdirectory called 'comp'. The rounds are paired in subdirectories, named 1,2,3,.. of this directory, 'comp'. Files named:
 
 brackets.yaml  pairing.yaml  round.yaml
 matches.yaml   player.yaml   tourney.yaml
 
 are left in these subdirectories after pairing. Don't delete these, as they are what allows data to be carried over from round to round.
 
-Scores are in another subdirectory called scores. They are of the form 1.yaml, 2.yaml,..
+Scores are in the file 'scores.yaml' in these subdirectories.
 
 =item B<DATA FILES>
 

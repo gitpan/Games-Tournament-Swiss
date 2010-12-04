@@ -1,10 +1,20 @@
 package Games::Tournament::Contestant::Swiss;
+BEGIN {
+  $Games::Tournament::Contestant::Swiss::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 21, 11時20分09秒
+# Last Edit: 2010 12月 04, 15時33分40秒
 # $Id: $
 
 use warnings;
 use strict;
+
+use List::MoreUtils qw/any/;
+
+use Games::Tournament::Swiss::Config;
+use constant ROLES => @Games::Tournament::Swiss::Config::roles?
+			@Games::Tournament::Swiss::Config::roles:
+			Games::Tournament::Swiss::Config->roles;
 
 use base qw/Games::Tournament::Contestant/;
 
@@ -14,13 +24,7 @@ use base qw/Games::Tournament::Contestant/;
 
 Games::Tournament::Contestant::Swiss  A competitor in a FIDE-Swiss-Rules event
 
-=head1 VERSION
-
-Version 0.03
-
 =cut
-
-our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -108,7 +112,7 @@ sub oldId {
 	$member->opponents( 0, 5, 11 )
 	$rolehistory = $member->opponents
 
-If ids are passed, adds them to the end of the list representing the latest opponents that $member has had in this tournament. (Normally one and only one parameter, the id of the opponent in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or an absence, or was unpaired, pass 'Bye' or 'Absence' or 'Unpaired'.
+If ids are passed, adds them to the end of the list representing the latest opponents that $member has had in this tournament. (Normally one and only one parameter, the id of the opponent in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or played no game, because of a bye, or no result, or was unpaired, pass 'Bye' or 'Forfeit' or 'Unpaired'.
 
 =cut
 
@@ -123,19 +127,44 @@ sub opponents {
 
 =head2 roles
 
-	$member->roles( 'Black' )
-	$rolehistory = $member->roles
+	$member->roles( 1, 'Black' )
+	$member->roles( 1 ) # 'Black'
+	$rolehistory = $member->roles # { 1 => 'Black' }
 
-If parameters are passed, adds them to the end of the list representing the latest roles that $member has had in this tournament. (Normally one and only one parameter, the role in the latest round, will be passed.) If no parameter is passed, returns a reference to the list. If the member had no game or even if they had a game but didn't play it, that is, if they had a bye, or an absence, or were unpaired, pass 'Bye', or 'Absence', or 'Unpaired.' F2,3
+If a round and role are passed, adds them to the roles that $member has had in this tournament. If the member had no game (or had a game but didn't play it), that is, if they had a bye, or no result, or were unpaired, pass 'Bye', or 'Forfeit', or 'Unpaired.' F2,3
 
 =cut
 
 sub roles {
     my $self = shift;
-    my @roles = @_;
-    if ( @roles ) { push @{ $self->{roles} }, @roles; return }
+    my $round = shift;
+    my $role = shift;
+    if ( defined $role and defined $round ) {
+	my $oldrole = $self->{roles}->{$round};
+	warn "$oldrole role replaced by $role" if defined $oldrole;
+	$self->{roles}->{$round} = $role;
+    }
+    elsif ( $self->{roles} and $round ) { return $self->{roles}->{$round}; }
     elsif ( $self->{roles} ) { return $self->{roles}; }
-    else { return []; }
+    else { return {}; }
+}
+
+
+=head2 rolesPlayedList
+
+A list, in round order, of the roles played against other players. Byes and other non-partnership roles are not included.
+
+=cut
+
+sub rolesPlayedList {
+    my $self = shift;
+    my $roles = $self->roles;
+    my @rounds = sort { $a <=> $b } keys %$roles;
+    my $last = $rounds[-1];
+    my @playrounds = grep { my $role = $roles->{$_};
+			    any { $role eq $_ } ROLES } @rounds;
+    my @playroles = map { $roles->{$_} } @playrounds;
+    return \@playroles;
 }
 
 
@@ -162,7 +191,7 @@ sub floating {
 	$member->floats( $round, 'Down' )
 	$rolehistory = $member->floats
 
-If a round number and float is passed, inserts this in an anonymous array representing the old floats that $member has had in this tournament. If only a round is passed, returns the float for that round. If no parameter is passed,  returns a anonymous array of all the floats indexed by the round. (Watch out for round 0, there. Heh-hey.) If the player was not floated, pass 'Not'. For convenience, if -1 or -2 are passed for the last round before, or the round 2 rounds ago, and those rounds do not exist (perhaps the tournament only started one round before), 'Not' is returned.
+If a round number and float is passed, inserts this in an anonymous array representing the old floats that $member has had in this tournament. If only a round is passed, returns the float for that round. If no parameter is passed,  returns a anonymous array of all the floats ordered by the round. If the player was not floated, pass 'Not'. For convenience, if -1 or -2 are passed for the last round before, or the round 2 rounds ago, and those rounds do not exist (perhaps the tournament only started one round before), 'Not' is returned.
 
 =cut
 
@@ -172,13 +201,15 @@ sub floats {
     my $round = shift;
     my $float = shift;
     if ( defined $round and defined $float ) {
-        $self->{floats}->[$round] = $float;
+        $self->{floats}->[$round-1] = $float;
 	return;
     }
     elsif ( defined $round ) {
-	if (not exists $self->{floats}->[$round] and ($round==-1 or $round==-2))
-	{return 'Not'}
-	else { return $self->{floats}->[$round]; }
+	if ($round == -1 or $round == -2) {
+	    if (not exists $self->{floats}->[$round-1] ) {return 'Not'}
+	    else { return $self->{floats}->[$round]; }
+	}
+	else { return $self->{floats}->[$round-1]; }
     }
     elsif ( $self->{floats} ) { return $self->{floats}; }
     else { return; }

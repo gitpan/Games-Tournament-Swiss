@@ -6,6 +6,7 @@ use strict;
 use warnings;
 # use Games::Tournament::Swiss::Test -base; 
 use Test::Base -base; 
+use List::MoreUtils qw/any/;
 
 use Games::Tournament::Contestant::Swiss::Preference;
 
@@ -19,14 +20,24 @@ run_is_deeply input => 'expected';
 sub updatepref {
 	my $sign = shift;
 	my $difference = shift;
-	# my $role = shift;
 	my $oldRoles = shift;
 	my @oldRoles = split /,/, $oldRoles;
-	my @oldOld = @oldRoles;
-	pop @oldOld;
+	my $lastrole = pop @oldRoles;
+	@oldRoles = grep { my $role = $_;
+				any { $role eq $_ } qw/Black White/ } @oldRoles;
+	my @lastTwo;
+	if ( @oldRoles > 1 )
+	{
+		$lastTwo[1] = $oldRoles[-1];
+		$lastTwo[0] = $oldRoles[-2];
+	}
+	elsif ( @oldRoles > 1 ) {
+		$lastTwo[0] = $oldRoles[-1];
+	}
+	else { @lastTwo = (); }
 	my $pref = Games::Tournament::Contestant::Swiss::Preference->new(
-		sign => $sign, difference => $difference, lastTwo => \@oldOld);
-	$pref->update( \@oldRoles );
+		sign => $sign, difference => $difference, lastTwo => \@lastTwo);
+	$pref->update(  [ @oldRoles, $lastrole ] );
 	my $lastTwo = join ',', @{ $pref->lastTwo };
 	return [ $pref->role, $pref->strength, $lastTwo ];
 }

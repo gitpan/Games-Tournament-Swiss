@@ -70,43 +70,44 @@ sub runRound {
 		$_->result( $results->{$bracket} ) for @$tables;
 		push @games, @$tables;
 	}
+	local $SIG{__WARN__} = sub {};
 	$tourney->collectCards( @games );
 	$tourney->round($round);
 };
 
 $t[1] = prepareTournament( 3, @lineup );
-runRound($t[1], 1, { 0=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>'Bye' });
-runRound($t[1], 2, { 0.5=>	{A=>'Draw',B=>'Draw'}, '0.5Bye'=>'Bye' });
+runRound($t[1], 1, { 0=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[1], 2, { 0.5=>	{A=>'Draw',B=>'Draw'}, '0.5Bye'=>{Bye=>'Bye'} });
 runRound($t[1], 3, {});
 
 $t[2] = prepareTournament( 3, @lineup );
-runRound($t[2], 1, { 0=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>'Bye' });
-runRound($t[2], 2, { 0.5=>	{A=>'Win',B=>'Loss'}, '0.5Bye'=>'Bye' });
+runRound($t[2], 1, { 0=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[2], 2, { 0.5=>	{A=>'Win',B=>'Loss'}, '0.5Bye'=>{Bye=>'Bye'} });
 runRound($t[2], 3, {});
 
 $t[3] = prepareTournament( 3, @lineup );
-runRound($t[3], 1, { 0=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>'Bye' });
-runRound($t[3], 2, { 0.5=>	{A=>'Loss',B=>'Win'}, '0.5Bye'=>'Bye' });
+runRound($t[3], 1, { 0=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[3], 2, { 0.5=>	{A=>'Loss',B=>'Win'}, '0.5Bye'=>{Bye=>'Bye'} });
 runRound($t[3], 3, {});
 
 $t[4] = prepareTournament( 3, @lineup );
-runRound($t[4], 1, { 0=>	{A=>'Win',B=>'Loss'}, '0Bye'=>'Bye' });
-runRound($t[4], 2, { 1=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>'Bye' });
+runRound($t[4], 1, { 0=>	{A=>'Win',B=>'Loss'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[4], 2, { 1=>	{A=>'Draw',B=>'Draw'}, '0Bye'=>{Bye=>'Bye'} });
 runRound($t[4], 3, {});
 
 $t[5] = prepareTournament( 3, @lineup );
-runRound($t[5], 1, { 0=>	{A=>'Win',B=>'Loss'}, '0Bye'=>'Bye' });
-runRound($t[5], 2, { 1=>	{A=>'Win',B=>'Loss'}, '0Bye'=>'Bye' });
+runRound($t[5], 1, { 0=>	{A=>'Win',B=>'Loss'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[5], 2, { 1=>	{A=>'Win',B=>'Loss'}, '0Bye'=>{Bye=>'Bye'} });
 runRound($t[5], 3, {});
 
 $t[6] = prepareTournament( 3, @lineup );
-runRound($t[6], 1, { 0=>	{A=>'Win',B=>'Loss'}, '0Bye'=>'Bye' });
-runRound($t[6], 2, { 1=>	{A=>'Loss',B=>'Win'}, '0Bye'=>'Bye' });
-# runRound($t[6], 3, {});
+runRound($t[6], 1, { 0=>	{A=>'Win',B=>'Loss'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[6], 2, { 1=>	{A=>'Loss',B=>'Win'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[6], 3, {});
 
 $t[7] = prepareTournament( 3, @lineup );
-runRound($t[7], 1, { 0=>	{A=>'Loss',B=>'Win'}, '0Bye'=>'Bye' });
-runRound($t[7], 2, { 1=>	{A=>'Loss',B=>'Win'}, '0Bye'=>'Bye' });
+runRound($t[7], 1, { 0=>	{A=>'Loss',B=>'Win'}, '0Bye'=>{Bye=>'Bye'} });
+runRound($t[7], 2, { 1=>	{A=>'Loss',B=>'Win'}, '0Bye'=>{Bye=>'Bye'} });
 runRound($t[7], 3, {});
 
 sub roundFilter
@@ -121,7 +122,7 @@ sub roundFilter
 		for my $game ( @$bracket )
 		{
 			my $contestants = $game->contestants;
-			my @ids = map { $contestants->{$_}->id } keys %$contestants;
+			my @ids = map { $contestants->{$_}->id } sort keys %$contestants;
 			push @{$tables{$key}}, \@ids;
 		}
 	}
@@ -353,18 +354,19 @@ __DATA__
  -
   - 2
 
-#=== Tourney 6 Round 3
-#--- input lines chomp roundFilter
-#6
-#3
-#--- expected yaml
-#1:
-# -
-#  - 2
-#  - 3
-#1Bye:
-# -
-#  - 1
+=== Tourney 6 Round 3
+--- input lines chomp roundFilter
+6
+3
+--- expected yaml
+1:
+ -
+  - 2
+  - 3
+1Bye:
+ -
+  - 1
+--- SKIP
 
 === Tourney 7 Round 1
 --- input lines chomp roundFilter

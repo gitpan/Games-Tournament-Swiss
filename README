@@ -1,13 +1,16 @@
 Games-Tournament-Swiss
 
-Version 0.17
+Version 0.15
 
+The complexity of the C11 code slowed this release down. C12 code wasn't touched, so I'm sure bugs remain. 
 
-This is a major revision. Late entries are now possible. Next is handling absentees.
+This is a major revision. In addition, we have a nicer interface to writing pairing tests. Look at three.t in the t/ directory.
 
 Warning!
 
 This is ALPHA-level software. Although it attempts to implement the FIDE Swiss Rules, it may not pair players correctly. It may take over your computer, and force you to reboot. It may DELETE files. It may DESTROY your computer. Use at your own risk.
+
+The complexity (recursiveness) of the C10-14 procedures and the bugs hidden there means nothing can be guaranteed. Cross your fingers that your tournament does not exercise the C12 code!
 
 NOTICE: More tests are needed. If you have an interesting pairing table that is difficult to pair, please report it as a bug at http://search.cpan.org/~drbean/Games-Tournament-Swiss/, ideally in the same format as t/three.t. Bring it on! Try to break Games::Tournament::Swiss and report your results!
 
@@ -15,6 +18,8 @@ I recommend looking at the scripts. If you want some more help, look at the
 tests. Again, scripts are still likely to break, but the purpose of that is to get you to write your own scripts. (ha-ha) Look at the scripts and the tests.
 
 This program is run from a shell. You need to work from a command line and type commands. It also depends on perl to run. If you don't know anything about perl, you will have to learn something about installing it and running scripts, before you can use this software.
+
+Alternatively, there is a web app frontend in a subversion repo at http://svn.openfoundry.org/swiss
 
 For perl on Windows, try the free download of ActiveState's distribution at http://www.activestate.com/store/activeperl, or the experimental Strawberry Perl http://win32.perl.org/wiki/index.php?title=Strawberry_Perl
 
@@ -44,9 +49,9 @@ The scripts assume that there is a directory in which a configuration file, call
 brackets.yaml  pairing.yaml  round.yaml
 matches.yaml   player.yaml   tourney.yaml
 
-are left in these subdirectories after pairing.
+may be left in these subdirectories after pairing.
 
-Scores are in another subdirectory called scores. They are of the form 1.yaml, 2.yaml,.. You need to create these files, if you use 'pairstately'.
+Scores are entered in the same subdirectories in a file called 'scores.yaml'. You need to create these files, if you use 'pairstately'.
 
 You can create a pairing table with 'pairingtable,' convert it into YAML form with 'pairtable2yaml' and run 'pair.'
 
@@ -113,6 +118,8 @@ GENERATING PAIRINGS
 
 Starting with an empty main directory, create league.yaml, and an empty subdirectory for the first round. Run the script, 'pair' in the empty round subdirectory. A log of the pairing is printed and 'round.yaml' in the directory contains the matches. After the games in the round are complete, in the scores subdirectory, enter the scores for the players in the file, '1.yaml', or whatever the round is. You can use the file called 1.yaml, or whatever in the round subdirectory as a template and afterward move it to the scores subdirectory. Then you can run 'crosstable 1' or 'pairingtable 1' in the original directory above the subdirectory, to get current standings. Convert your pairing table into YAML form with 'pairtable2yaml' and copy it into a subdirectory for the next round, and continue as before.
 
+Alternatively, set up the Catalyst web app frontend and access Games::Tournament::Swiss through the Internet.
+
 SUPPORT AND DOCUMENTATION
 
 After installing, you can find documentation for this module with the perldoc command.
@@ -135,7 +142,7 @@ You can also look for information at:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007-9 Dr Bean
+Copyright (C) 2010 Dr Bean
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

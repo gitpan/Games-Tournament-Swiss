@@ -8,6 +8,9 @@ use strict;
 use warnings;
 use Test::More;
 use YAML qw/Load LoadFile DumpFile/;
+use File::Spec;
+use File::Basename;
+use FindBin qw/$Bin/;
 
 use Config;
 my $secure_perl_path = $Config{perlpath};
@@ -28,6 +31,12 @@ BEGIN {
 use Games::Tournament::Contestant::Swiss;
 use Games::Tournament::Swiss;
 use Games::Tournament::Swiss::Bracket;
+
+my $orig_dir = File::Spec->rel2abs( '.' );
+
+my $test_dir = 'pairstately_test_dir';
+mkdir $test_dir;
+chdir $test_dir;
 
 my @members = Load(<<'...');
 ---
@@ -52,10 +61,14 @@ rating: 2
 title: Unknown
 ...
 
-DumpFile './league.yaml', {member => \@members};
+DumpFile "./league.yaml", {member => \@members};
+
+mkdir 'comp';
+chdir 'comp';
+
 mkdir '1';
-chdir '1';
-system "$secure_perl_path ../script_files/pairstately";
+chdir '1' or warn "No round 1 directory: $!";
+system "$secure_perl_path $Bin/../script_files/pairstately";
 
 my $round = LoadFile './round.yaml';
 my @tests = (
@@ -74,7 +87,7 @@ my @tests = (
   $round->{group}->{2}->{White} eq 'LaLa Lakers'), 'S1 players different roles']
 );
 
-my $round1 = Load(<<'...');
+my $scores = Load(<<'...');
 ---
 0:
   'Your New Nicks': 1
@@ -83,13 +96,15 @@ my $round1 = Load(<<'...');
   'LaLa Lakers': 1
   'Alexander Alekhine': 0
 ...
+DumpFile './scores.yaml', $scores;
 
-chdir '..';
-mkdir './scores';
-DumpFile './scores/1.yaml', $round1;
+chdir '../../' or warn "No tourney directory: $!";
+
+
+chdir 'comp' or warn "No tourney directory: $!";
 mkdir '2';
 chdir '2';
-system "$secure_perl_path ../script_files/pairstately";
+system "$secure_perl_path $Bin/../script_files/pairstately";
 
 $round = LoadFile './round.yaml';
 push @tests, (
@@ -110,16 +125,23 @@ push @tests, (
 
 chdir '..';
 my @rounds = ( 1..2 );
-for my $dir ( 'scores', @rounds )
+for my $dir ( @rounds )
 {
-	chdir "./$dir";
-	my @files = glob './*';
+	chdir "$dir" or die "Cannot change to $dir";
+	my @files = glob '*';
 	unlink @files;
 	chdir '..';
 	rmdir "./$dir";
+	rmdir "./comp/$dir";
 }
+chdir '..' or warn "No tourney directory: $!";
+rmdir 'comp';
 unlink './league.yaml', './league.yaml.bak';
+chdir '..' or warn "No original directory: $!";
+rmdir $test_dir;
 
+my $pwd = File::Spec->rel2abs( '.' );
+die "The pwd, $pwd is not the original $orig_dir." unless $pwd eq $orig_dir;
 plan tests => $#tests + 1;
 
 map { ok( $_->[0], $_->[ 1, ], ) } @tests;

@@ -1,25 +1,18 @@
 #!/usr/bin/perl
 
-# Last Edit: 2009  7月 21, 11時59分22秒
+# Last Edit: 2010 12月 04, 15時31分32秒
 # $Id: /swiss/trunk/script_files/pair 1285 2007-08-20T09:52:35.271041Z greg  $
 
 =head1 NAME
 
 crosstable - The results of players against their opponents
 
-=head1 VERSION
-
-Version 0.04
-
 =cut
-
-our $VERSION = '0.04';
 
 use strict;
 use warnings;
 
 use YAML qw/LoadFile DumpFile/;
-use List::MoreUtils qw/all/;
 
 use Games::Tournament::Swiss::Config;
 
@@ -75,25 +68,6 @@ for my $round ( @rounds )
     $games   = LoadFile "./$round/matches.yaml";
     if ( $tourney->unmarkedCards(@$games) ) {
         my $results = LoadFile("./scores/$round.yaml");
-	my @tables;
-	if ( @tables = ( keys %$results ) and
-		all { ref } @{$results}{@tables} ) {
-	    for my $table (@tables) {
-		for my $player ( keys %{ $results->{$table} } ) {
-		    my $result = $results->{$table}->{$player};
-		    if ( exists $scores->{lc $result} ) {
-			$results->{$player} = $result;
-		    }
-		    elsif ( $abbrev->{$result} ) {
-			$results->{$player} = $abbrev->{$result};
-		    }
-		    else {
-			die
-    "Player $player on table $table in round $round got $result?";
-		    }
-		}
-	    }
-	}
         for my $game (@$games) {
             my (%score, %result);
             my $total;
@@ -131,7 +105,7 @@ for my $round ( @rounds )
         $table->{$id}->{id} = $id;
         my $game     = $player->findCard(@$games);
         my $opponent = $player->myOpponent($game)
-          || Games::Tournament::Contestant->new( name => "Bye", id => "-" );
+          || Games::Tournament::Contestant->new( name => "Bye", id => "0" );
         my $result = $game->myResult($player);
         if ( $result eq 'Bye' ) { $result = 'W'; }
         else { $result =~ s/^(.).*$/$1/; }

@@ -4,13 +4,7 @@
 
 pairyaml2txt - Convert a pairingtable in YAML format into readable text
 
-=head1 VERSION
-
-Version 0.01
-
 =cut
-
-our $VERSION = '0.01';
 
 use strict;
 use warnings;

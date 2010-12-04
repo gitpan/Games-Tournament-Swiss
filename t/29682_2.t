@@ -148,7 +148,8 @@ my $runRound = sub {
     my @games = $tourney->recreateCards( {
        round => $round, opponents => \%opponents,
 	roles => \%roles, floats => \%floats } );
-   $tourney->collectCards( @games );
+    local $SIG{__WARN__} = sub {};
+    $tourney->collectCards( @games );
     my %b = $tourney->formBrackets;
     my $pairing  = $tourney->pairing( \%b );
     my $p        = $pairing->matchPlayers;
@@ -322,6 +323,6 @@ push @isTests,
 plan tests => $#okTests + $#isTests + 2;
 
 ok( $_->[0], $_->[ 1, ], ) for @okTests;
-is( $_->[0], $_->[ 1, ], $_->[ 2, ], ) for @isTests;
+is_deeply( $_->[0], $_->[ 1, ], $_->[ 2, ], ) for @isTests;
 
 # vim: set ts=8 sts=4 sw=4 noet:

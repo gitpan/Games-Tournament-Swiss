@@ -1,6 +1,9 @@
 package Games::Tournament::Contestant;
+BEGIN {
+  $Games::Tournament::Contestant::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 23, 10時43分21秒
+# Last Edit: 2010 12月 04, 15時35分53秒
 # $Id: $
 
 use warnings;
@@ -23,13 +26,7 @@ use constant SCORES => %Games::Tournament::Swiss::Config::scores?
 
 Games::Tournament::Contestant  A competitor matched with others over a series of rounds
 
-=head1 VERSION
-
-Version 0.03
-
 =cut
-
-our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -205,7 +202,7 @@ sub score {
     my $score = shift;
     if ( defined $score ) { $self->{score} = $score; }
     my $scores      = $self->scores;
-    return $self->{score} || undef unless defined $scores and
+    return $self->{score} unless defined $scores and
 		all { defined $_ } values %$scores;
     my %lcconverter = map { lc($_) => $converter{$_} } keys %converter;
     my %scores      = map { $_ => lc $scores->{$_} } keys %$scores;
@@ -368,6 +365,25 @@ sub firstround {
     if ( defined $firstround ) { $self->{firstround} = $firstround; }
     elsif ( exists $self->{firstround} ) { return $self->{firstround}; }
 }
+
+
+=head2 absent
+
+    $member->absent(1)
+    puah @absent if $member->absent
+
+A flag of convenience telling you whether this player is absent and not to be paired in the tournament. This is not the same as a forfeit. The Games::Tournament::Swiss constructor uses this.
+
+=cut
+
+sub absent {
+    my $self = shift;
+    my $absent = shift;
+    if ( $absent ) { $self->{absent} = 1; return }
+    elsif ( defined $self->{absent} ) { return $self->{absent}; }
+    else { return; }
+}
+
 
 =head1 AUTHOR
 

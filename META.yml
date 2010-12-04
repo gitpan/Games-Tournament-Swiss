@@ -1,59 +1,109 @@
 ---
-name: Games-Tournament-Swiss
-version: 0.17
+abstract: 'FIDE Swiss Same-Rank Contestant Pairing'
 author:
-  - 'Dr Bean <drbean, followed by the at mark (@), cpan, then a dot, and finally, org>'
-abstract: FIDE Swiss Same-Rank Contestant Pairing
+  - 'Dr Bean <drbean at (a) cpan dot (.) org>'
+build_requires: {}
+configure_requires:
+  ExtUtils::MakeMaker: 6.31
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.102341, CPAN::Meta::Converter version 2.102400'
 license: perl
-resources:
-  license: http://dev.perl.org/licenses/
-requires:
-  List::MoreUtils: 0
-build_requires:
-  IO::All: 0
-  Parse::RecDescent: 0
-  Test::Base: 0
-  Test::More: 0
-  YAML: 0
-recommends:
-  IO::All: 0
-  Parse::RecDescent: 0
-  YAML: 0
-provides:
-  Games::Tournament:
-    file: lib/Games/Tournament.pm
-    version: 0.02
-  Games::Tournament::Card:
-    file: lib/Games/Tournament/Card.pm
-    version: 0.02
-  Games::Tournament::Contestant:
-    file: lib/Games/Tournament/Contestant.pm
-    version: 0.03
-  Games::Tournament::Contestant::Swiss:
-    file: lib/Games/Tournament/Contestant/Swiss.pm
-    version: 0.03
-  Games::Tournament::Contestant::Swiss::Preference:
-    file: lib/Games/Tournament/Contestant/Swiss/Preference.pm
-    version: 0.05
-  Games::Tournament::Swiss:
-    file: lib/Games/Tournament/Swiss.pm
-    version: 0.17
-  Games::Tournament::Swiss::Bracket:
-    file: lib/Games/Tournament/Swiss/Bracket.pm
-    version: 0.06
-  Games::Tournament::Swiss::Config:
-    file: lib/Games/Tournament/Swiss/Config.pm
-    version: 0.03
-  Games::Tournament::Swiss::Procedure:
-    file: lib/Games/Tournament/Swiss/Procedure.pm
-    version: 0.04
-  Games::Tournament::Swiss::Procedure::Dummy:
-    file: lib/Games/Tournament/Swiss/Procedure/Dummy.pm
-    version: 0.03
-  Games::Tournament::Swiss::Procedure::FIDE:
-    file: lib/Games/Tournament/Swiss/Procedure/FIDE.pm
-    version: 0.13
-generated_by: Module::Build version 0.2808
 meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Games-Tournament-Swiss
+resources:
+  homepage: http://search.cpan.org/dist/Games-Tournament-Swiss/
+  repository: http://svn.openfoundry.org/swiss
+version: 0.18
+x_Dist_Zilla:
+  plugins:
+    -
+      class: Dist::Zilla::Plugin::GatherDir
+      name: GatherDir
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::MetaYAML
+      name: MetaYAML
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::ManifestSkip
+      name: ManifestSkip
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::PkgVersion
+      name: PkgVersion
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::PruneCruft
+      name: PruneCruft
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::MakeMaker
+      name: MakeMaker
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::ExecDir
+      name: ExecDir
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::License
+      name: License
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::SVK::Check
+      name: SVK::Check
+      version: ~
+    -
+      class: Dist::Zilla::Plugin::SVK::Commit
+      name: SVK::Commit
+      version: ~
+    -
+      class: Dist::Zilla::Plugin::SVK::Tag
+      name: SVK::Tag
+      version: ~
+    -
+      class: Dist::Zilla::Plugin::SVK::Push
+      name: SVK::Push
+      version: ~
+    -
+      class: Dist::Zilla::Plugin::TestRelease
+      name: TestRelease
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::ConfirmRelease
+      name: ConfirmRelease
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::UploadToCPAN
+      name: UploadToCPAN
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::MetaConfig
+      name: MetaConfig
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::MetaResources
+      name: MetaResources
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':InstallModules'
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':TestFiles'
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':ExecFiles'
+      version: 4.102341
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':ShareFiles'
+      version: 4.102341
+  zilla:
+    class: Dist::Zilla::Dist::Builder
+    config:
+      is_trial: 0
+    version: 4.102341

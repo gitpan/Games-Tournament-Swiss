@@ -161,6 +161,7 @@ for my $round ( 1..$lastround )
         $games{$opponentId} = $game;
         push @games, $game;
    }
+   local $SIG{__WARN__} = sub {};
    $tourney->collectCards( @games );
 }
 

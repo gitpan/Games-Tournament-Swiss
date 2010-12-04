@@ -8,6 +8,7 @@
 # http://chesschat.org/showpost.php?p=172088&postcount=42
 # http://chesschat.org/showpost.php?p=172097&postcount=44
 # http://chesschat.org/showpost.php?p=172124&postcount=45
+# http://chesschat.org/showthread.php?p=294907#post294907
 
 use lib qw/t lib/;
 
@@ -264,6 +265,7 @@ for my $round ( 1..$lastround )
         $games{$opponentId} = $game;
         push @games, $game;
    }
+   local $SIG{__WARN__} = sub {};
    $tourney->collectCards( @games );
 }
 
@@ -304,16 +306,16 @@ push @tests,
 [ $lineup[10],	$m{'2Remainder'}->[1]->contestants->{White},	'2R-1 White'],
 [ $lineup[5],	$m{'2Remainder'}->[1]->contestants->{Black},	'2R-1 Black'],
 [ $lineup[9],	$m{1}->[0]->contestants->{White},	'1-0 White,was id 12!'],
-[ $lineup[17],	$m{1}->[0]->contestants->{Black},	'1-0 Black'],
+[ $lineup[17],	$m{1}->[0]->contestants->{Black},	'1-0 Black,was id 10!'],
 [ $lineup[18],	$m{1}->[1]->contestants->{White},	'1-1 White,was id 20!'],
-[ $lineup[19],	$m{1}->[1]->contestants->{Black},	'1-1 Black'],
-[ $lineup[11],	$m{0}->[0]->contestants->{White},	'$m0 White'],
+[ $lineup[19],	$m{1}->[1]->contestants->{Black},	'1-1 Black,was id 18!'],
+[ $lineup[11],	$m{0}->[0]->contestants->{White},	'$m0 White,was id 19!'],
 [ $lineup[13],	$m{0}->[0]->contestants->{Black},	'$m0 Black'],
 ;
 
 plan tests => $#tests + 1;
 
 ok( $_->[0], $_->[ 1, ], ) for @tests[0..9];
-is( $_->[0], $_->[ 1, ], $_->[ 2, ], ) for @tests[10..$#tests];
+is_deeply( $_->[0], $_->[ 1, ], $_->[ 2, ], ) for @tests[10..$#tests];
 
 # vim: set ts=8 sts=4 sw=4 noet:

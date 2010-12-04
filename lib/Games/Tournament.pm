@@ -1,6 +1,9 @@
 package Games::Tournament;
+BEGIN {
+  $Games::Tournament::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 23, 10時15分54秒
+# Last Edit: 2010 12月 04, 15時36分20秒
 # $Id: $
 
 use warnings;
@@ -9,6 +12,7 @@ use Carp;
 
 use List::Util qw/first/;
 use List::MoreUtils qw/any all/;
+use Scalar::Util qw/looks_like_number/;
 use Scalar::Util qw/looks_like_number/;
 
 use Games::Tournament::Swiss::Config;
@@ -21,13 +25,7 @@ use constant FIRSTROUND => $Games::Tournament::Swiss::Config::firstround;
 
 Games::Tournament - Contestant Pairing 
 
-=head1 VERSION
-
-Version 0.02
-
 =cut
-
-our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -47,7 +45,7 @@ In a tournament, there are contestants, and matches over rounds between the cont
 
  Games::Tournament->new( rounds => 2, entrants => [ $a, $b, $c ] )
 
-Creates a competition for entrants, over a number of rounds. entrants is a list of player objects. Enters (see enter method) each of the entrants in the tournament.
+Creates a competition for entrants, over a number of rounds. entrants is a list of player objects. Enters (see enter method) each of the entrants in the tournament. (But why is the entrants arg being deleted?)
 
 =cut 
 
@@ -66,7 +64,7 @@ sub new {
 
  $tourney->enter($player)
 
-Enters a Games::Tournament::Contestant player object with a rating, title id, and name in the entrants of the tournament. Die if no name or id. We are authoritarians. Warn if no rating defined. No check for duplicate ids. Set this round as their first round, unless they already entered in an earlier round (But did they play in that round?)
+Enters a Games::Tournament::Contestant player object with a rating, title id, and name in the entrants of the tournament. Die if no name or id. We are authoritarians. Warn if no rating defined. No check for duplicate ids. Set this round as their first round, unless they already entered in an earlier round (But did they play in that round?) Set their absent accessor if they are in absentees.
 
 =cut
 
@@ -77,6 +75,10 @@ sub enter {
     die "Player " . $player->id . " entering in Round $round + 1?" unless
 			looks_like_number($round);
     $player->firstround($round+1) unless $player->firstround;
+    my $absent = $self->absentees;
+    my @absentids;
+    @absentids = map { $_->id } @$absent if $absent and ref $absent eq 'ARRAY';
+    $player->absent(1) if any { $_ eq $player->id } @absentids;
     my $entrants = $self->entrants;
     for my $required ( qw/id name/ ) {
 	unless ( $player->$required ) {
@@ -152,15 +154,15 @@ sub reverseRank {
 
     $tourney->named($name)
 
-Returns the contestant whose name is $name. Entrants are grepped for the first one with a name with stringwise equality.
+Returns a contestant whose name is $name, the first entrant with a name with stringwise equality. So beware same-named contestants.
 
 =cut 
 
 sub named {
     my $self        = shift;
     my $name        = shift;
-    my @contestants = @{ $self->entrants };
-    return ( grep { $_->name eq $name } @contestants )[0];
+    my $contestants = $self->entrants;
+    return ( first { $_->name eq $name } @$contestants );
 }
 
 
@@ -222,7 +224,7 @@ sub roleCheck {
 	@rounds = $tourney->met($deepblue, @grandmasters)
 	next if $tourney->met($deepblue, $capablanca)
 
-In list context, returns an array of the rounds in which $deepblue met the corresponding member of @grandmasters (and of the empty string '' if they haven't met.) In scalar context, returns the number of grandmasters met. Don't forget to collect scorecards in the appropriate games first! (Assumes players do not meet more than once!) This is NOT the same as Games::Tournament::Contestant::met!
+In list context, returns an array of the rounds in which $deepblue met the corresponding member of @grandmasters (and of the empty string '' if they haven't met.) In scalar context, returns the number of grandmasters met. Don't forget to collect scorecards in the appropriate games first! (Assumes players do not meet more than once!) This is NOT the same as Games::Tournament::Contestant::met! See also Games;:Tournament::Swiss::whoPlayedWho.
 
 =cut
 
@@ -340,7 +342,7 @@ sub updateScores {
           if not $card or $@;
         my $result = $card->myResult($player);
         die "$result result in $card game for player $id in round $round?"
-          unless $result =~ m/^(?:Win|Loss|Draw|Bye|Absent)/i;
+          unless $result =~ m/^(?:Win|Loss|Draw|Bye|Forfeit)/i;
         $$scores{$round} = $result;
         $player->scores($scores) if defined $scores;
         push @scores, $$scores{$round};
@@ -385,7 +387,7 @@ sub play {
 
 	$tourney->entrants
 
-Gets/sets the entrants as an anonymous array of player objects.
+Gets/sets the entrants as an anonymous array of player objects. Users may rely on the original order being maintained in web app cookies. 
 
 =cut
 
@@ -394,6 +396,22 @@ sub entrants {
     my $entrants = shift;
     if ( defined $entrants ) { $self->{entrants} = $entrants; }
     elsif ( $self->{entrants} ) { return $self->{entrants}; }
+}
+
+
+=head2 absentees
+
+	$tourney->absentees
+
+Gets/sets the absentees as an anonymous array of player objects. These players won't be included in the brackets of players who are to be paired.
+
+=cut
+
+sub absentees {
+    my $self     = shift;
+    my $absentees = shift;
+    if ( defined $absentees ) { $self->{absentees} = $absentees; }
+    elsif ( $self->{absentees} ) { return $self->{absentees}; }
 }
 
 
@@ -443,6 +461,80 @@ sub size {
     return scalar @{ $self->entrants };
 }
 
+
+=head2 idNameCheck
+
+$tourney->idNameCheck # WARNING: 13301616 and 13300849 both, Petrosian, Tigran
+
+Dies if 2 entrants have the same id, warns if they have the same name.
+
+=cut
+
+sub idNameCheck {
+    my $self = shift;
+    my $lineup = $self->entrants;
+    my (%idcheck, %namecheck);
+    for my $player ( @$lineup ) {
+	my $id = $player->id;
+	my $name = $player->name;
+	if ( defined $idcheck{$id} ) {
+	    croak $name . " and $idcheck{$id} have the same id: $id";
+	}
+	if ( defined $namecheck{$name} ) {
+	    carp "WARNING: $id and $namecheck{$name} have the same name: " .
+		$name . ". Proceeding, but BEWARE there may be problems later,";
+	}
+	$idcheck{$id} = $name;
+	$namecheck{$name} = $id;
+    }
+}
+
+
+=head2 idCheck
+
+$tourney->idCheck # Petrosian, Tigran, and Tigran Petrosian both 13301616
+
+Dies if 2 entrants have the same id
+
+=cut
+
+sub idCheck {
+    my $self = shift;
+    my $lineup = $self->entrants;
+    my %idcheck;
+    for my $player ( @$lineup ) {
+	my $id = $player->id;
+	my $name = $player->name;
+	if ( defined $idcheck{$id} ) {
+	    croak $name . " and $idcheck{$id} have the same id: $id";
+	}
+	$idcheck{$id} = $name;
+    }
+}
+
+=head2 nameCheck
+
+$tourney->idNameCheck # WARNING: 13301616 and 13300849 both, Petrosian, Tigran
+
+Warn if 2 entrants have the same name
+
+=cut
+
+sub nameCheck {
+    my $self = shift;
+    my $lineup = $self->entrants;
+    my %namecheck;
+    for my $player ( @$lineup ) {
+	my $id = $player->id;
+	my $name = $player->name;
+	if ( defined $namecheck{$name} ) {
+	    carp "WARNING: $id and $namecheck{$name} have the same name: " .
+		$name . ". Proceeding, but BEWARE there may be problems later,";
+	}
+	$namecheck{$name} = $id;
+    }
+}
+
 =head2 odd
 
  float($lowest) if $self->odd(@group)
@@ -488,9 +580,15 @@ sub catLog {
     my @states = @_;
     @states = $self->loggedProcedures unless @states;
     my $log = $self->{log};
-    my %report = map {	my $report = $log->{$_}->{strings};
-			$_ => join '', @$report if $report and
-			    ref $report eq 'ARRAY' } @states;
+    my %report;
+    for my $state ( @states ) {
+	my $strings = $log->{$state}->{strings};
+	unless ( $strings and ref $strings eq 'ARRAY' ) {
+	    $report{$state} = undef;
+	    next;
+	}
+	$report{$state} = join '', @$strings;
+    }
     return %report;
 }
 
@@ -567,7 +665,7 @@ sub loggedProcedures {
     my @states = @_;
     unless ( @states ) { return keys %{ $self->{logged} }; }
     my %logged;
-    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 20;
+    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 BYE MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 21;
     for my $state (@states)
     {   
 	carp "$state is unloggable procedure" if not exists $logged{$state};
@@ -589,7 +687,7 @@ Adds messages generated in all the procedures to a reportable log
 sub loggingAll {
     my $self = shift;
     my %logged;
-    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 20;
+    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 BYE MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 21;
     for my $state ( keys %logged )
     {   
 	# carp "$state is unloggable procedure" if not exists $logged{$state};
@@ -617,7 +715,7 @@ sub disloggedProcedures {
 	@{$self->{logged}}{@methods} = (0) x @methods;
     }
     my %logged;
-    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 20;
+    @logged{qw/START NEXT PREV C1 C2 C3 C4 C5 C6PAIRS C6OTHERS C7 C8 C9 C10 C11 C12 C13 C14 BYE MATCHPLAYERS ASSIGNPAIRINGNUMBERS/} = (1) x 21;
     for my $state (@states)
     {   
 	carp "$state is unloggable procedure" if not defined $logged{$state};

@@ -25,11 +25,6 @@ filters { input => [ qw/chomp players/ ], expected => [ qw/chomp / ] };
 
 plan tests => 1 * blocks;
 
-use Games::Tournament::Swiss::Config;
-my %unabbr = Games::Tournament::Swiss::Config->abbreviation;
-$unabbr{U} = 'Undefined';
-my %abbr = reverse %unabbr;
-
 sub Test::Base::Filter::players {
 	my $self = shift;
 	my $players = shift;

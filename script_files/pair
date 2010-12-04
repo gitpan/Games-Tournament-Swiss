@@ -1,19 +1,13 @@
 #!/usr/bin/perl
 
-# Last Edit: 2009  7月 24, 10時51分26秒
+# Last Edit: 2010 12月 04, 15時32分47秒
 # $Id: /swiss/trunk/script_files/pair 1532 2007-10-27T03:38:38.615327Z greg  $
 
 =head1 NAME
 
 pair - Pair players for the next round of a swiss tournament
 
-=head1 VERSION
-
-Version 0.09
-
 =cut
-
-our $VERSION = '0.09';
 
 use strict;
 use warnings;
@@ -73,14 +67,10 @@ for my $late ( @$lateEntries ) {
     my $player = Games::Tournament::Contestant::Swiss->new( %$late );
     $tourney->enter($player);
 }
-# $tourney->loggedProcedures('ASSIGNPAIRINGNUMBERS');
 $tourney->assignPairingNumbers;
 $tourney->initializePreferences;
-# use IO::All;
-# io('=')->print($tourney->catLog('ASSIGNPAIRINGNUMBERS'));
 
-$lineup = $tourney->entrants;
-my @ids = map { $_->{id} } @$lineup;
+my @ids = map { $_->{pairingNumber} } @$lineup;
 my $pairingtable;
 if ( $round >= $firstround and -e "./pairtable.yaml" )
 {
@@ -99,7 +89,7 @@ if ( $round >= $firstround and -e "./pairtable.yaml" )
        my %roles = map { $_ => $roles->{$_}->[$round-1] } @ids;
        my %floats =
 	   map { $_ => $floats->{$_}->[$round-$lastround-1]||undef } @ids;
-       my @games = $tourney->recreateCards( {
+       my @games = $tourney->prepareCards( {
 	   round => $round, opponents => \%opponents,
 	    roles => \%roles, floats => \%floats } );
        $tourney->collectCards( @games );
@@ -110,6 +100,8 @@ my %brackets = $tourney->formBrackets;
 my $pairing = $tourney->pairing( \%brackets );
 $pairing->loggingAll;
 my $results = $pairing->matchPlayers;
+my $log = $pairing->logreport;
+use IO::All; io('=')->print($log);
 my $matches = $results->{matches};
 my @games;
 
@@ -135,8 +127,9 @@ $n = 1;
 for my $game (@games) {
     my %group = map { $_ => $game->{contestants}->{$_}->{name} }
       keys %{ $game->{contestants} };
-    $schedule->{group}->{ $n++ } = \%group;
-    $template->{$n++} = { reverse %group };
+    $schedule->{group}->{$n} = \%group;
+    $template->{$n} = { reverse %group };
+    $n++;
 }
 
 if ( $lateEntries ) {
@@ -151,9 +144,19 @@ if ( $lateEntries ) {
     DumpFile '../league.yaml', $league;
 }
 
-$schedule->{round} = $next;
 
+$schedule->{firstround} = $swiss->firstround($firstround);
+$schedule->{scores} = $swiss->scores($scores);
+$schedule->{roles} = $swiss->roles($roles);
+$schedule->{algorithm} = $swiss->algorithm($algorithm);
+$schedule->{round} = $next;
+$schedule->{week}  = $next . ' perhaps. Change if wrong.';
+
+DumpFile 'player.yaml', $tourney->entrants;
+DumpFile 'tourney.yaml', $tourney;
+DumpFile 'pairing.yaml', $pairing;
 DumpFile 'matches.yaml', \@games;
+DumpFile 'brackets.yaml', \%brackets;
 
 my @keys = sort {$a<=>$b} keys %{$schedule->{group}};
 Bless($schedule->{group})->keys( \@keys );

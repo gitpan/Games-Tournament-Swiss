@@ -1,6 +1,9 @@
 package Games::Tournament::Swiss::Procedure::FIDE;
+BEGIN {
+  $Games::Tournament::Swiss::Procedure::FIDE::VERSION = '0.18';
+}
 
-# Last Edit: 2009  7月 21, 18時07分12秒
+# Last Edit: 2010 12月 04, 15時34分38秒
 # $Id: /swiss/trunk/lib/Games/Tournament/Swiss/Procedure/FIDE.pm 1657 2007-11-28T09:30:59.935029Z dv  $
 
 use warnings;
@@ -44,13 +47,7 @@ use constant    PREV      => "PREV";
 
 Games::Tournament::Swiss::Procedure::FIDE - FIDE Swiss Rules Based on Rating 04.1
 
-=head1 VERSION
-
-Version 0.13
-
 =cut
-
-our $VERSION = '0.13';
 
 
 =head1 SYNOPSIS
@@ -111,7 +108,7 @@ sub matchPlayers {
         C4,      [ \&c4,      C5 ],
         C5,      [ \&c5,      C6PAIRS ],
         C6PAIRS, [ \&c6pairs, C6OTHERS, C7, NEXT ],
-        C6OTHERS, [ \&c6others, NEXT, C1, C2, C10, BYE ],
+        C6OTHERS, [ \&c6others, NEXT, C1, C2, C10, C13 ],
         C7, [ \&c7, C6PAIRS, C8, C9, C10, C11 ],
         C8,  [ \&c8,  C5, C9,  C10 ],
         C9,  [ \&c9,  C4, C10 ],
@@ -138,16 +135,50 @@ sub matchPlayers {
 	if ( any { $_ eq $oldState } $self->loggedProcedures )
 	{
 	    my %log = $self->tailLog($oldState);
-	    print $oldState . "," . $log{$oldState} if %log;
+	    $self->logreport( $oldState . "," . $log{$oldState} ) if %log;
 	}
         if ( $state eq ERROR ) {
             die
-qq/Pairing error: @{[map { "$_ => $args{$_}, " } keys %args]} Pairing NOT complete\n/;
+qq/Pairing error: $args{msg}. Pairing NOT complete\n/;
         }
-        if ( $state eq LAST ) { print "Pairing complete\n"; return $self; }
+        if ( $state eq LAST ) {
+	    $self->message( $args{msg} );
+	    return $self; }
         die "No transition defined from $oldState to $state"
           unless grep m/$state/, @alterStates;
     }
+}
+
+
+=head2 message
+
+ $pairing->message;
+
+Something about the success or failure of the pairing procedure as far as it concerns the user. This is not a message about the success or failure of the Games::Tournament::Swiss::Procedure::FIDE code as in 'warn', or a logging of the progress of the players in their brackets through the FIDE pairing procedure as in 'log', or a message about a problem coding the FIDE algorithm, as in 'ERROR'.
+
+=cut 
+
+sub message {
+    my $self = shift;
+    my $message = shift;
+    if ( defined $message ) { $self->{message} .= $message; }
+    elsif ( $self->{message} ) { return $self->{message}; }
+}
+
+
+=head2 logreport
+
+ $pairing->logreport('C6: Pairing S1 and S2');
+
+Accumulates a log in string form, of the progress of the players in their brackets through the FIDE pairing procedure, using the logging methods of Games::Tournament, and returning the log accumulated if no arguments are passed.
+
+=cut 
+
+sub logreport {
+    my $self = shift;
+    my $logreport = shift;
+    if ( defined $logreport ) { $self->{logreport} .= $logreport; }
+    elsif ( $self->{logreport} ) { return $self->{logreport}; }
 }
 
 
@@ -286,8 +317,7 @@ sub c1 {
     $previousMembers = $previousBracket->members if $previousBracket;
     $previousNumber = $previousBracket->number if $previousBracket;
     if (@unpairables) {
-        if ( $index eq $self->lastBracket and $self->lastBracket ne
-	    $self->firstBracket )
+        if ( $index eq $self->lastBracket and $index ne $self->firstBracket )
 	{
 	    $self->log( "@unpairableIds in last bracket, $number ($index)." );
             return C13;
@@ -438,6 +468,7 @@ sub c4 {
     my $groups  = $self->brackets;
     my $group   = $groups->{$self->thisBracket};
     my $members = $group->members;
+    my $index   = $self->thisBracket;
     my $number   = $group->number;
     $group->resetS12;
     my $s1      = $group->s1;
@@ -445,8 +476,8 @@ sub c4 {
     my @s1ids = map {$_->pairingNumber} @$s1;
     my @s2ids = map {$_->pairingNumber} @$s2;
     $self->log( "S1: @s1ids & S2: @s2ids" );
-    die "Empty S1 in Bracket $number with S2: @s2ids." unless @$s1;
-    die "Empty Bracket $number with  S1: @s1ids." unless @$s2;
+    die "Empty S1 in $index-Bracket ($number) with S2: @s2ids." unless @$s1;
+    die "Empty $index-Bracket ($number) with  S1: @s1ids." unless @$s2;
     return C5;
 }
 
@@ -477,7 +508,7 @@ sub c5 {
     $group->s2( \@s2 );
     for my $member ( @{ $group->s2 } ) {
         die "$member->{id} was in ${number}th bracket more than once"
-          if ( grep { $_->id == $member->id } @{ $group->s2 } ) > 1;
+          if ( grep { $_->id eq $member->id } @{ $group->s2 } ) > 1;
     }
     $groups->{ $self->thisBracket } = $group;
     $self->brackets($groups);
@@ -649,16 +680,12 @@ sub c6others {
     my $nonpaired = $self->nonpaired;
     die "Unpaired players are: $nonpaired?" unless defined $nonpaired and
 							    @$nonpaired;
-    if ( @$nonpaired == 1 and $index eq $self->lastBracket ) {
-	my $id = $nonpaired->[0]->pairingNumber;
-	$self->log( "One unpaired player, $id in last bracket $number." );
-	$self->byer($nonpaired->[0]);
-	return BYE;
-    }
-    if ( not $group->hetero or @$nonpaired == 1 ) {
+    my $islastBracket = ( $index eq $self->lastBracket );
+    unless ( $group->hetero and @$nonpaired > 1 or $islastBracket ) {
 	my $next = $self->nextBracket;
 	my $nextBracket = $groups->{$next};
 	my $nextNumber = $nextBracket->number;
+	my @nextMembers = map {$_->pairingNumber} @{$nextBracket->members};
         for my $evacuee (@$nonpaired) {
             $group->exit($evacuee);
             $evacuee->floating('Down');
@@ -666,22 +693,27 @@ sub c6others {
         }
 	my @floaters = map {$_->pairingNumber} @$nonpaired;
 	my @pairIds = map {$_->pairingNumber} @{$group->members};
-	my @next = map {$_->pairingNumber} @{$nextBracket->members};
         $self->log(
-"Floating remaining @floaters Down. [$number] @pairIds & [$nextNumber] @next" );
+"Floating remaining @floaters Down. [$number] @pairIds. @floaters => [$nextNumber] @nextMembers" );
         return NEXT;
     }
     else {
-	my $xprime = $group->xprime;
+	my $xprime = $group->bigGroupXprime;
+	my $remainingX =  $group->{xdeduction}? $xprime - $group->{xdeduction}:
+	    $xprime;
         my $remainderGroup = Games::Tournament::Swiss::Bracket->new(
             score       => $group->score,
             remainderof => $group,
 	    number      => "${number}'s Remainder Group",
-	    xprime => ($group->bigGroupXprime - $group->{xdeduction}),
+	    xprime => $remainingX,
         );
 	# $group->{remainder} ||= $remainderGroup;
 	$group->{remainder} = $remainderGroup;
 	my $remaIndex = "${index}Remainder";
+	if ( $islastBracket and @$nonpaired == 1 ) { 
+	    $remaIndex = "${index}Bye";
+	    $remainderGroup->{number} = "${number}'s Bye";
+	}
         $groups->{$remaIndex} = $remainderGroup;
 	my $remainderIndex = $self->nextBracket;
 	my $remainder = $groups->{$remainderIndex};
@@ -704,6 +736,9 @@ sub c6others {
 	$remainderGroup->{lastheteroshuffle} = 1
 	    if $group->{lastheteroshuffle};
 	$self->brackets($groups);
+	if ( $islastBracket ) {
+	    return NEXT;
+	}
 	$self->thisBracket($remainderIndex);
 	my ( $rejectionSlip, @rejections) = $self->rejectionTest(@$nonpaired);
 	if ( @rejections and not @$nonpaired % 2 )
@@ -972,9 +1007,9 @@ sub c10 {
 			    @wellpairedS2, $lastShufflePossibility;
 	    $heteroBracket->{lastC10Alternate} = \@lastIds;
 	    my $lowest = $s1->[-1];
-	    my $id = $lowest->id;
+	    my $id = $lowest->pairingNumber;
 	    my $match = $matches->[-1];
-	    my $partner = first { $_->id != $id } $match->myPlayers;
+	    my $partner = $lowest->myOpponent($match);
 	    my $partnerId = $partner->pairingNumber;
 	    $self->log(
 "Unpairing lowest downfloater, $id and $partnerId in $index-Bracket [$number]
@@ -1328,7 +1363,9 @@ sub c12 {
 
  Games::Tournament::Swiss::Procedure->c13
 
-If the lowest score group contains a player who cannot be paired without violating B1 or B2 or who, if they are the only player in the group, cannot be given a bye (B2b), the pairing of the penultimate score bracket is undone.  Try to find another pairing in the penultimate score bracket which will allow a pairing in the lowest score bracket. If in the penultimate score bracket p becomes zero (i.e. no pairing can be found which will allow a correct pairing for the lowest score bracket) then the two lowest score brackets are joined into a new lowest score bracket. Because now another score bracket is the penultimate one C13 can be repeated until an acceptable pairing is obtained.  XXX  Perhaps all the players from the old penultimate bracket were floated down. eg, t/cc6619.t. As a hack unfloat only those with the same score as the new penultimate bracket.
+If the lowest score group contains a player who cannot be paired without violating B1 or B2 or who, if they are the only player in the group, cannot be given a bye (B1b), the pairing of the penultimate score bracket is undone.  Try to find another pairing in the penultimate score bracket which will allow a pairing in the lowest score bracket. If in the penultimate score bracket p becomes zero (i.e. no pairing can be found which will allow a correct pairing for the lowest score bracket) then the two lowest score brackets are joined into a new lowest score bracket. Because now another score bracket is the penultimate one C13 can be repeated until an acceptable pairing is obtained.  XXX  Perhaps all the players from the old penultimate bracket were floated down. eg, t/cc6619.t. As a hack unfloat only those with the same score as the new penultimate bracket.
+
+TODO not finding a pairing is not a program ERROR, but a LAST state.
 
 =cut 
 
@@ -1340,34 +1377,36 @@ sub c13 {
     my $group   = $brackets->{$index};
     my $number   = $group->number;
     my $members = $group->members;
-    unless ($index eq $self->lastBracket)
-    {
-	$self->log("$index-Bracket [$number] not last group. Passing to C14" ) ;
-	return C14;
+    unless ($index eq $self->lastBracket) {
+       $self->log("$index-Bracket [$number] not last group. Passing to C14" ) ;
+       return C14;
     }
-    if ( @$members == 1 and not $self->byes->{$members->[0]->pairingNumber} ) {
-	$self->byer($members->[0]);
-	return BYE;
+    if ( $index eq $self->firstBracket )
+    {
+	return LAST,
+	msg => "All joined into one $index bracket, but no pairings! Sorry";
+    }
+    if ( @$members == 1 ) {
+	my $lastone = $members->[0];
+	my $pairingN = $lastone->pairingNumber;
+	my $id = $lastone->id;
+	$self->log( "One unpaired player, $pairingN in last bracket $number." );
+	my $byeGone = $self->byes->{$id};
+	if ( not $byeGone) {
+	    $self->byer($lastone);
+	    return BYE;
+	}
+	$self->log( "B1b: But that player, id $id had Bye in round $byeGone." );
     }
     my $penultimateIndex = $self->previousBracket;
     my $penultimateBracket = $brackets->{$penultimateIndex};
     my $penultimateNumber = $penultimateBracket->number;
     my $penultScore = $penultimateBracket->score;
     # $penultimateBracket->floatCheckWaive('None');
-    if ( @$members == 1 and not $self->byes->{$members->[0]->pairingNumber} ) {
-	$self->byer($members->[0]);
-	return BYE;
-    }
-    if ( $index eq $self->firstBracket )
-    {
-	return ERROR,
-	msg => "All joined into one $index bracket, but no pairings! Sorry";
-    }
     delete $matches->{ $penultimateIndex };
     $self->log(
 	"Undoing $penultimateIndex-Bracket [$penultimateNumber] matches");
-    my @immigrants = $group->downFloaters;
-    my @returnees = grep { $_->score == $penultScore } @immigrants;
+    my @returnees = grep { $_->score == $penultScore } @$members;
     if ( @returnees )
     {   
 	my @floaterIds = map { $_->pairingNumber } @returnees;
@@ -1424,7 +1463,7 @@ sub c13 {
 
  $self->bye
 
-The last, single, unpairable player is given a bye. B2
+The last, singular, unpairable player is given a bye. B2
 
 =cut 
 
@@ -1439,13 +1478,14 @@ sub bye {
     my $byes = $self->byes;
     my $round = $self->round;
     my $matches = $self->matches;
-    my $byeindex = $index . 'Bye';
-    $matches->{$byeindex} = [
+    my $byeindex = $index =~ /Bye$/? $index : $index . 'Bye';
+    my $game = 
       Games::Tournament::Card->new(
 	round       => $round,
-	result      => { Bye => 'Bye' },
-	contestants => { Bye => $byer } )
-      ];
+	result      => undef,
+	contestants => { Bye => $byer } );
+    $game->float($byer, 'Down');
+    $matches->{$byeindex} = [ $game ];
     $self->log( "OK." );
     $byes->{$id} = $round;
     return LAST;
@@ -1559,7 +1599,7 @@ sub colors {
     my ($message, @bracketMatches);
     for my $pair ( @$pairs ) {
         my @pair = @$pair;
-        my @rolehistory = ( map { $pair[$_]->roles } 0, 1 );
+        my @rolehistory = ( map { $pair[$_]->rolesPlayedList } 0, 1 );
 	my @lastdiff;
 	for my $lookback ( 1 .. $round - FIRSTROUND )
 	{
@@ -1659,15 +1699,14 @@ sub colors {
         $message .=  $rule . ' ' .
 	    $contestants->{ (ROLES)[0] }->pairingNumber . "&" .
 	    $contestants->{ (ROLES)[1] }->pairingNumber . ' ';
-        my %floats =
-          map { (ROLES)[$_] => $contestants->{ (ROLES)[$_] }->floating } 0 .. 1;
-        push @bracketMatches,
-          Games::Tournament::Card->new(
+        my $game = Games::Tournament::Card->new(
             round       => $self->round,
             result      => undef,
             contestants => $contestants,
-            floats      => \%floats
           );
+	$game->float($contestants->{$_}, $contestants->{$_}->floating || 'Not')
+			    for ROLES;
+        push @bracketMatches, $game;
     }
     # $self->previousBracket($group);
     return $message, @bracketMatches;

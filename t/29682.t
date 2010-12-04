@@ -146,11 +146,13 @@ for my $round ( 1..$lastround )
     my @games = $tourney->recreateCards( {
        round => $round, opponents => \%opponents,
 	roles => \%roles, floats => \%floats } );
+   local $SIG{__WARN__} = sub {};
    $tourney->collectCards( @games );
 }
 
 my %b = $tourney->formBrackets;
 my $pairing  = $tourney->pairing( \%b );
+$pairing->loggingAll;
 my $p        = $pairing->matchPlayers;
 my %m = map { $_ => $p->{matches}->{$_} } keys %{ $p->{matches} };
 $tourney->round(5);
@@ -169,26 +171,26 @@ my @tests = (
 );
 
 push @tests,
-[ $lineup[7],	$m{1.5}->[0]->contestants->{Black},	'$m1.5 Black'],
-[ $lineup[2],	$m{1.5}->[0]->contestants->{White},	'$m1.5 White'],
-[ $lineup[5],	$m{'1.5Remainder'}->[0]->contestants->{Black},	'$m1.5R Black'],
-[ $lineup[0],	$m{'1.5Remainder'}->[0]->contestants->{White},	'$m1.5R White'],
-[ $lineup[1],	$m{'1.5Remainder'}->[1]->contestants->{Black},	'$m1.5R Black'],
-[ $lineup[8],	$m{'1.5Remainder'}->[1]->contestants->{White},	'$m1.5R White'],
-[ $lineup[3],	$m{'1.5Remainder'}->[2]->contestants->{Black},	'$m1.5R Black'],
-[ $lineup[6],	$m{'1.5Remainder'}->[2]->contestants->{White},	'$m1.5R White'],
-[ $lineup[12],	$m{1}->[0]->contestants->{Black},	'$m1 Black'],
-[ $lineup[4],	$m{1}->[0]->contestants->{White},	'$m1 White'],
-[ $lineup[9],	$m{1}->[1]->contestants->{Black},	'$m1 Black'],
-[ $lineup[14],	$m{1}->[1]->contestants->{White},	'$m1 White'],
-[ $lineup[10],	$m{1}->[2]->contestants->{Black},	'$m1 Black'],
-[ $lineup[15],	$m{1}->[2]->contestants->{White},	'$m1 White'],
-[ $lineup[16],	$m{0.5}->[0]->contestants->{Black},	'$m0.5 Black'],
-[ $lineup[11],	$m{0.5}->[0]->contestants->{White},	'$m0.5 White'],
-[ $lineup[18],	$m{0}->[0]->contestants->{Black},	'$m0 Black'],
-[ $lineup[13],	$m{0}->[0]->contestants->{White},	'$m0 White'],
-[ $lineup[19],	$m{0}->[1]->contestants->{Black},	'$m0 Black'],
-[ $lineup[17],	$m{0}->[1]->contestants->{White},	'$m0 White'],
+[ $p8,	$m{1.5}->[0]->contestants->{Black},	'$m1.5 Black'],
+[ $p3,	$m{1.5}->[0]->contestants->{White},	'$m1.5 White'],
+[ $p6,	$m{'1.5Remainder'}->[0]->contestants->{Black},	'$m1.5R Black'],
+[ $p1,	$m{'1.5Remainder'}->[0]->contestants->{White},	'$m1.5R White'],
+[ $p2,	$m{'1.5Remainder'}->[1]->contestants->{Black},	'$m1.5R Black'],
+[ $p9,	$m{'1.5Remainder'}->[1]->contestants->{White},	'$m1.5R White'],
+[ $p4,	$m{'1.5Remainder'}->[2]->contestants->{Black},	'$m1.5R Black'],
+[ $p7,	$m{'1.5Remainder'}->[2]->contestants->{White},	'$m1.5R White'],
+[ $p13,	$m{1}->[0]->contestants->{Black},	'$m1 Black'],
+[ $p5,	$m{1}->[0]->contestants->{White},	'$m1 White'],
+[ $p10,	$m{1}->[1]->contestants->{Black},	'$m1 Black'],
+[ $p15,	$m{1}->[1]->contestants->{White},	'$m1 White'],
+[ $p11,	$m{1}->[2]->contestants->{Black},	'$m1 Black'],
+[ $p16,	$m{1}->[2]->contestants->{White},	'$m1 White'],
+[ $p17,	$m{0.5}->[0]->contestants->{Black},	'$m0.5 Black'],
+[ $p12,	$m{0.5}->[0]->contestants->{White},	'$m0.5 White'],
+[ $p19,	$m{0}->[0]->contestants->{Black},	'$m0 Black'],
+[ $p14,	$m{0}->[0]->contestants->{White},	'$m0 White'],
+[ $p20,	$m{0}->[1]->contestants->{Black},	'$m0 Black'],
+[ $p18,	$m{0}->[1]->contestants->{White},	'$m0 White'],
 ;
 
 plan tests => $#tests + 1;

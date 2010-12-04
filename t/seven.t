@@ -95,8 +95,13 @@ my @tests = (
 my @matches = map { @$_ } values %m;
 for my $match ( @matches )
 {
-	$match->result({Black => 'Draw', White => 'Draw' }) 
-			unless $match->result;
+	if ( $match->isBye ) {
+		$match->result( { Bye => 'Bye' } );
+	}
+	else {
+		$match->result({Black => 'Draw', White => 'Draw' }) 
+				unless $match->result;
+	}
 }
 $t->collectCards( @matches );
 my %b2 = $t->formBrackets;
@@ -130,8 +135,13 @@ for my $bracket ( values %m2 )
 }
 for my $match ( @matches2 )
 {
-	$match->result({Black => 'Draw', White => 'Draw' })
-			unless $match->result;
+	if ( $match->isBye ) {
+		$match->result( { Bye => 'Bye' } );
+	}
+	else {
+		$match->result({Black => 'Draw', White => 'Draw' })
+				unless $match->result;
+	}
 }
 $t->collectCards( @matches2 );
 my %b3 = $t->formBrackets;
@@ -169,8 +179,13 @@ for my $bracket ( values %m3 )
 }
 for my $match ( @matches3 )
 {
-	$match->result({Black => 'Draw', White => 'Draw' })
-			unless $match->result;
+	if ( $match->isBye ) {
+		$match->result( { Bye => 'Bye' } );
+	}
+	else {
+		$match->result({Black => 'Draw', White => 'Draw' })
+				unless $match->result;
+	}
 }
 $t->collectCards( @matches3 );
 my %b4 = $t->formBrackets;

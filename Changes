@@ -1,10 +1,22 @@
 ---
+version: 0.18
+date: 六 12月  4 13:08:01 CST 2010
+revision: about 1095 at openfoundry, 6440 on my computer
+changes:
+  - rt 29495 flipped back
+  - script score.yaml files in same round directory as round.yaml
+  - cleaned up handling of Byes with a strict following of FIDE Rules in particular in C13 in connection with rt 62502
+  - Contestant::Swiss floats method
+  - Card hasPlayer method
+
+---
 version: 0.17
-date: 2009年  7月 24日 金曜日 12:28:38 JST
+date: 2009å¹´  7æ 24æ¥ éææ¥ 12:28:38 JST
 revision: about 110
 changes:
   - Late entries. Test: lateentry.t
-  - rt 48419 b is not q-w. http://chesschat.org/showpost.php?p=248965&postcount=42. Test: x.t
+  - rt 48419 b is not q-w. http://chesschat.org/showpost.php?p=248965&postcount
+=42. Test: x.t
 
 ---
 version: 0.16

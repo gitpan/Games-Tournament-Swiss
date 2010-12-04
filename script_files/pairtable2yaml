@@ -4,25 +4,20 @@
 
 pairtable2yaml - Create YAML version of pairing table
 
-=head1 VERSION
-
-Version 0.02
-
 =cut
-
-our $VERSION = '0.02';
 
 use strict;
 use warnings;
 
-use YAML;
+use YAML qw/LoadFile DumpFile/;
+
 use IO::All;
 use Parse::RecDescent;
 our $RD_HINT=1;
 use List::MoreUtils qw/firstval/;
 
-my $pairtable = @ARGV? io $ARGV[0]: io '-';
-my @lines = $pairtable->slurp;
+my $io = io $ARGV[0];
+my @lines = $io->slurp;
 
 # shift @lines; shift @lines; shift @lines; shift @lines;
 my $table;
@@ -102,8 +97,7 @@ for my $line ( @lines )
     ($::player, $::opponents, $::roles, $::b5float, $::b6float, $::score, $::result) = undef;
 }
 
-my $yaml = io '-';
-$yaml->print( Dump $table );
+DumpFile 'pairtable.yaml', $table;
 
 __END__
 
@@ -119,7 +113,7 @@ Options:
 
 =head1 DESCRIPTION
 
-B<pairtable2yaml> converts a pairing table used to pair the next round of a swiss tournament into a YAML data structure. It expects the pairing table, contained in a text file (or on STDIN), to be formatted as a series of columns that represent a) scoregroups that players with equal scores fall into (optional), b) place so far (optional), c) pairing numbers, d) opponents each player has already met (each round's opponent being separated by a comma), e) the initial letters of the roles in the previous rounds (concatenated into one 'word'), f) downfloating/upfloating in the previous round (D/U) and in the round before the previous round (d/u) (an entry being made here only if the player floated), and g) the score of the player so far. 
+B<pairtable2yaml> converts a pairing table used to pair the next round of a swiss tournament into a YAML data structure. It expects the pairing table, contained in a text file, to be formatted as a series of columns that represent a) scoregroups that players with equal scores fall into (optional), b) place so far (optional), c) pairing numbers, d) opponents each player has already met (each round's opponent being separated by a comma), e) the initial letters of the roles in the previous rounds (concatenated into one 'word'), f) downfloating/upfloating in the previous round (D/U) and in the round before the previous round (d/u) (an entry being made here only if the player floated), and g) the score of the player so far. 
 
 A typical pairing table looks like this:
 
@@ -158,9 +152,7 @@ In YAML, this becomes, or something the equivalent:
 
 This program parses with Parse:RecDescent and is slow, but tries to make no mistakes.
 
-The YAML data structure is dumped on STDOUT. A suitable pipeline for generating a pairing table in YAML form and putting it in the directory of the next round is:
-
-    pairingtable 4 | pairtable2yaml > 5/pairtable.yaml
+The YAML data structure is dumped in pairtable.yaml in the same directory.
 
 =cut
 
